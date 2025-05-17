@@ -1,0 +1,4 @@
+.env
+*.log
+.cursor/
+node_modules/
