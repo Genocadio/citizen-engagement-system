@@ -5,8 +5,8 @@ A modern citizen engagement platform built with Next.js, TypeScript, and Node.js
 ## 🌐 Live Demo
 
 The application is deployed and accessible at:
-- User Portal: [https://ces-gdth.onrender.com/user](https://ces-gdth.onrender.com/user)
-- Admin Portal: [https://ces-gdth.onrender.com/admin](https://ces-gdth.onrender.com/admin)
+- User Portal: [https://ce-s.onrender.com/user](https://ces-s.onrender.com/user)
+- Admin Portal: [https://ce-s.onrender.com/admin](https://ces-s.onrender.com/admin)
 
 ### Demo Credentials
 
