@@ -20,6 +20,7 @@ import { useToast } from "@/components/ui/use-toast"
  * @property {string} username - User's username (optional)
  * @property {string} phoneNumber - User's phone number (optional)
  * @property {string} role - User's role in the system
+ * @property {string} avatar - User's avatar URL (optional)
  */
 type User = {
   id: string
@@ -29,6 +30,7 @@ type User = {
   username?: string
   phoneNumber?: string
   role: string
+  avatar?: string
 }
 
 /**

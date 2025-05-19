@@ -79,19 +79,19 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="left">
               <nav className="grid gap-6 text-lg font-medium">
-                <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+                <Link href="/user" className="flex items-center gap-2 text-lg font-semibold">
                   Citizen Engagement
                 </Link>
-                <Link href="/" className="hover:text-foreground/80">
+                <Link href="/user" className="hover:text-foreground/80">
                   Home
                 </Link>
-                <Link href="/submit" className="hover:text-foreground/80">
+                <Link href="/user/submit" className="hover:text-foreground/80">
                   Submit Feedback
                 </Link>
-                <Link href="/issues" className="hover:text-foreground/80">
+                <Link href="/user/issues" className="hover:text-foreground/80">
                   Public Issues
                 </Link>
-                <Link href="/dashboard" className="hover:text-foreground/80">
+                <Link href="/user/dashboard" className="hover:text-foreground/80">
                   My Dashboard
                 </Link>
               </nav>
@@ -101,16 +101,16 @@ export default function Header() {
             Citizen Engagement
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link href="/" className="hover:text-foreground/80">
+            <Link href="/user" className="hover:text-foreground/80">
               Home
             </Link>
-            <Link href="/submit" className="hover:text-foreground/80">
+            <Link href="/user/submit" className="hover:text-foreground/80">
               Submit Feedback
             </Link>
-            <Link href="/issues" className="hover:text-foreground/80">
+            <Link href="/user/issues" className="hover:text-foreground/80">
               Public Issues
             </Link>
-            <Link href="/dashboard" className="hover:text-foreground/80">
+            <Link href="/user/dashboard" className="hover:text-foreground/80">
               My Dashboard
             </Link>
           </nav>
@@ -140,10 +140,10 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard">Dashboard</Link>
+                  <Link href="/user/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
+                  <Link href="/user/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>Log out</DropdownMenuItem>

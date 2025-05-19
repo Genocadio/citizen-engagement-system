@@ -27,14 +27,22 @@ export const GET_FEEDBACKS = gql`
         firstName
         lastName
         username
+        profileUrl
       }
       location {
         country
         province
         district
         sector
+        otherDetails
       }
+      attachments
       likes
+      likedBy {
+        id
+      }
+      followerCount
+      isFollowing
       comments {
         id
       }
@@ -69,6 +77,8 @@ export const GET_USER_FEEDBACKS = gql`
           sector
         }
         likes
+        followerCount
+        isFollowing
         comments {
           id
         }
@@ -120,23 +130,252 @@ export const GET_PUBLIC_FEEDBACKS = gql`
         firstName
         lastName
         username
+        profileUrl
       }
       location {
         country
         province
         district
         sector
+        otherDetails
       }
+      attachments
       likes
+      likedBy {
+        id
+      }
+      followerCount
+      isFollowing
       comments {
         id
       }
       responses {
         id
       }
+    }
+  }
+`;
+
+export const MY_FEEDBACKS = gql`
+  query MyFeedbacks($limit: Int, $offset: Int) {
+    myFeedbacks(limit: $limit, offset: $offset) {
+      id
+      ticketId
+      title
+      description
+      type
+      status
+      category
+      subcategory
+      priority
+      isAnonymous
+      chatEnabled
+      createdAt
+      author {
+        id
+        firstName
+        lastName
+        username
+        profileUrl
+      }
+      location {
+        country
+        province
+        district
+        sector
+        otherDetails
+      }
+      attachments
+      likes
+      likedBy {
+        id
+      }
+      followerCount
+      isFollowing
+      comments {
+        id
+      }
+      responses {
+        id
+      }
+    }
+  }
+`;
+
+export const GET_FEEDBACK_BY_ID = gql`
+  query GetFeedbackById($id: ID!) {
+    feedback(id: $id) {
+      id
+      ticketId
+      title
+      description
+      type
+      status
+      category
+      subcategory
+      priority
+      isAnonymous
+      chatEnabled
+      createdAt
+      updatedAt
+      author {
+        id
+        firstName
+        lastName
+        username
+        profileUrl
+        role
+        email
+        phoneNumber
+        category
+        createdAt
+        updatedAt
+        __typename
+      }
+      assignedTo {
+        id
+        firstName
+        lastName
+        username
+        profileUrl
+        role
+        __typename
+      }
+      location {
+        country
+        province
+        district
+        sector
+        otherDetails
+        __typename
+      }
+      attachments
+      likes
+      likesCount
+      hasLiked
+      likedBy {
+        id
+        __typename
+      }
+      followerCount
+      isFollowing
+      comments {
+        id
+        message
+        author {
+          id
+          firstName
+          lastName
+          username
+          profileUrl
+          __typename
+        }
+        authorName
+        attachments
+        likes
+        likesCount
+        hasLiked
+        likedBy {
+          id
+          __typename
+        }
+        createdAt
+        updatedAt
+        __typename
+      }
+      responses {
+        id
+        message
+        by {
+          id
+          firstName
+          lastName
+          username
+          profileUrl
+          __typename
+        }
+        statusUpdate
+        attachments
+        likes
+        likedBy {
+          id
+          __typename
+        }
+        createdAt
+        updatedAt
+        __typename
+      }
+      __typename
+    }
+  }
+`;
+
+export const GET_FEEDBACK_BY_TICKET_ID = gql`
+  query GetFeedbackByTicketId($ticketId: String!) {
+    feedbackByTicketId(ticketId: $ticketId) {
+      id
+      ticketId
+      title
+      description
+      type
+      status
+      category
+      subcategory
+      priority
+      isAnonymous
+      chatEnabled
+      createdAt
+      author {
+        id
+        firstName
+        lastName
+        username
+        profileUrl
+      }
+      location {
+        country
+        province
+        district
+        sector
+        otherDetails
+      }
+      attachments
+      likes
+      likedBy {
+        id
+      }
       followers {
         id
       }
+      followerCount
+      isFollowing
+      comments {
+        id
+      }
+      responses {
+        id
+      }
+    }
+  }
+`;
+
+export const GET_CURRENT_USER = gql`
+  query GetCurrentUser {
+    me {
+      id
+      email
+      firstName
+      lastName
+      username
+      phoneNumber
+      profileUrl
+      role
+      category
+      isActive
+      lastLoginAt
+      lastActivityAt
+      createdAt
+      updatedAt
     }
   }
 `; 

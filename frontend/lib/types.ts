@@ -13,13 +13,15 @@ export interface User {
   username?: string
 }
 
+export type FeedbackStatus = 'open' | 'in-progress' | 'resolved' | 'closed'
+
 export interface Feedback {
   id: string
   ticketId: string
   title: string
   description: string
   type: string
-  status: string
+  status: FeedbackStatus
   category: string
   subcategory?: string
   priority: string

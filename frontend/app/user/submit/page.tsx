@@ -596,7 +596,7 @@ export default function SubmitPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                  <Button type="button" variant="outline" onClick={() => router.push("/")}>
+                  <Button type="button" variant="outline" onClick={() => router.push("/user")}>
                     Cancel
                   </Button>
                   <Button type="submit">Submit Suggestion</Button>

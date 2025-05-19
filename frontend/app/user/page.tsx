@@ -4,12 +4,20 @@
  * and access various features of the platform.
  */
 
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, CheckCircle, Clock, MessageSquare, ThumbsUp } from "lucide-react"
+import { ArrowRight, CheckCircle, Clock, MessageSquare, ThumbsUp, Ticket } from "lucide-react"
 import { StatCard } from "@/components/stat-card"
 import { RecentIssues } from "@/components/recent-issues"
+import { Input } from "@/components/ui/input"
+import { useQuery } from "@apollo/client"
+import { GET_FEEDBACK_BY_TICKET_ID } from "@/lib/graphql/queries"
+import { toast } from "react-toastify"
 
 /**
  * Home page component that displays the main landing page of the application.
@@ -22,6 +30,43 @@ import { RecentIssues } from "@/components/recent-issues"
  * - Feature cards highlighting main platform capabilities
  */
 export default function Home() {
+  const router = useRouter()
+  const [ticketIdSearch, setTicketIdSearch] = useState("")
+  const [shouldSearch, setShouldSearch] = useState(false)
+
+  const { data: ticketData, loading: ticketLoading, error: ticketError } = useQuery(GET_FEEDBACK_BY_TICKET_ID, {
+    variables: {
+      ticketId: ticketIdSearch.toUpperCase(),
+    },
+    skip: !shouldSearch || !ticketIdSearch,
+  })
+
+  useEffect(() => {
+    if (ticketData?.feedbackByTicketId) {
+      router.push(`/user/issues/${ticketData.feedbackByTicketId.id}`)
+      setShouldSearch(false)
+    } else if (ticketData && !ticketData.feedbackByTicketId) {
+      toast.error("No feedback found with this ticket ID")
+      setShouldSearch(false)
+    }
+  }, [ticketData, router])
+
+  useEffect(() => {
+    if (ticketError) {
+      toast.error("Feedback not found. Please check the ticket ID and try again.")
+      setShouldSearch(false)
+    }
+  }, [ticketError])
+
+  const handleTicketIdSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!ticketIdSearch.trim()) {
+      toast.error("Please enter a ticket ID")
+      return
+    }
+    setShouldSearch(true)
+  }
+
   return (
     <div className="flex min-h-screen flex-col ">
       <section className="py-12 md:py-16 lg:py-20">
@@ -35,12 +80,28 @@ export default function Home() {
                 Submit feedback, report issues, and track progress on community matters that are important to you.
               </p>
             </div>
+            <form onSubmit={handleTicketIdSearch} className="w-full max-w-md">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Ticket className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by ticket ID (e.g. CT-123456)"
+                    className="pl-8 uppercase"
+                    value={ticketIdSearch}
+                    onChange={(e) => setTicketIdSearch(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <Button type="submit" disabled={ticketLoading}>
+                  {ticketLoading ? "Searching..." : "Search"}
+                </Button>
+              </div>
+            </form>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
               <Button asChild size="lg">
-                <Link href="/submit">Submit Feedback</Link>
+                <Link href="/user/submit">Submit Feedback</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link href="/issues">View Public Issues</Link>
+                <Link href="/user/issues">View Public Issues</Link>
               </Button>
             </div>
           </div>

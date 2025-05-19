@@ -1,11 +1,23 @@
+/**
+ * @fileoverview Authentication middleware for REST API
+ * @description Handles JWT token verification and user authentication for REST endpoints
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../../../models/User';
 
+/**
+ * Interface for JWT payload
+ * @interface JwtPayload
+ */
 interface JwtPayload {
   id: string;
 }
 
+/**
+ * Extend Express Request type to include user property
+ */
 declare global {
   namespace Express {
     interface Request {
@@ -14,6 +26,14 @@ declare global {
   }
 }
 
+/**
+ * Authentication middleware
+ * Verifies JWT token and attaches user to request object
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @param {NextFunction} next - Express next function
+ * @returns {Promise<void>}
+ */
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');

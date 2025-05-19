@@ -6,14 +6,14 @@
 
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { categories, FeedbackType, StatusType, AuthorType } from "@/lib/data"
-import { Search, ChevronDown } from "lucide-react"
+import { Search, ChevronDown, ChevronUp, MapPin, MessageSquare, ThumbsUp, ThumbsDown, UserPlus, UserMinus, Plus } from "lucide-react"
 import { IssueCard } from "@/components/issue-card"
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth-context"
-import { usePublicFeedbacks } from "@/lib/hooks/use-public-feedbacks"
+import { useFeedbackPagination } from "@/lib/hooks/use-feedback-pagination"
 
 const ITEMS_PER_PAGE = 10
 
@@ -62,12 +62,67 @@ interface GraphQLFeedback {
   followers: { id: string }[]
 }
 
-interface FeedbacksData {
-  feedbacks: GraphQLFeedback[]
+interface IssueCardProps {
+  id: string
+  title: string
+  description: string
+  type: FeedbackType
+  category: string
+  subcategory: string
+  ticketNumber: string
+  submittedAt: string
+  status: StatusType
+  isPublic: boolean
+  isAnonymous: boolean
+  citizenName: string
+  email: string
+  phone: string
+  submittedBy: string | null
+  location: Location
+  referenceTo: string | null
+  attachments: any[]
+  assignedAgency: string
+  assignedTo: string | null
+  followers: string[]
+  views: number
+  statusHistory: {
+    status: StatusType
+    changedBy: string
+    timestamp: string
+    note: string
+  }[]
+  response: {
+    responseId: string
+    by: string
+    message: string
+    timestamp: string
+    attachments: any[]
+    statusUpdate: StatusType
+    likes: number
+    likedBy: string[]
+  } | null
+  comments: {
+    commentId: string
+    authorType: AuthorType
+    authorId: string
+    authorName: string
+    message: string
+    timestamp: string
+    likes: number
+    likedBy: string[]
+  }[]
+  rating: number | null
+  language: string
+  chatMode: boolean
+  chatEnabledBy: string | null
+  chatEnabledAt: string | null
+  followerCount: number
+  isFollowing: boolean
+  responses: { responseId: string }[]
 }
 
 // Transform GraphQL feedback to match IssueCard expected format
-function transformFeedback(feedback: GraphQLFeedback) {
+function transformFeedback(feedback: GraphQLFeedback): IssueCardProps {
   // Convert MongoDB timestamp to ISO string
   const createdAt = new Date(parseInt(feedback.createdAt)).toISOString()
 
@@ -132,6 +187,9 @@ function transformFeedback(feedback: GraphQLFeedback) {
     chatMode: false,
     chatEnabledBy: null,
     chatEnabledAt: null,
+    followerCount: feedback.followers.length,
+    isFollowing: false,
+    responses: feedback.responses.map(r => ({ responseId: r.id }))
   }
 }
 
@@ -158,89 +216,40 @@ function transformFeedback(feedback: GraphQLFeedback) {
  * - Integrates with the IssueCard component for consistent issue display
  */
 export default function IssuesPage() {
-  const router = useRouter()
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [hasMore, setHasMore] = useState(true)
-  const loadMoreRef = useRef(null)
 
-  const { feedbacks, loading, error, fetchMore } = usePublicFeedbacks({
-    limit: ITEMS_PER_PAGE,
-    offset: 0,
+  const { feedbacks, loading, error, hasMore, loadMoreRef } = useFeedbackPagination({
     category: categoryFilter,
-    status: statusFilter,
+    status: statusFilter
   })
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading && hasMore && feedbacks.length > 0) {
-          fetchMore({
-            variables: {
-              offset: feedbacks.length,
-              limit: ITEMS_PER_PAGE,
-              category: categoryFilter !== "all" ? categoryFilter : undefined,
-              status: statusFilter !== "all" ? statusFilter : undefined,
-            },
-            updateQuery: (prev, { fetchMoreResult }) => {
-              if (!fetchMoreResult) return prev
-              
-              // If we get fewer items than requested, we've reached the end
-              if (fetchMoreResult.feedbacks.length < ITEMS_PER_PAGE) {
-                setHasMore(false)
-              }
-
-              return {
-                ...prev,
-                feedbacks: [...prev.feedbacks, ...fetchMoreResult.feedbacks]
-              }
-            }
-          })
-        }
-      },
-      { 
-        rootMargin: '400px', // Start loading when user is 400px from the bottom
-        threshold: 0.1 // Trigger when at least 10% of the element is visible
-      }
-    )
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current)
-    }
-
-    return () => observer.disconnect()
-  }, [loading, feedbacks, fetchMore, categoryFilter, statusFilter, hasMore])
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setHasMore(true)
-  }, [categoryFilter, statusFilter, searchQuery])
-
-  const filteredIssues = feedbacks.filter((issue) => {
+  const filteredIssues = feedbacks.filter((issue: GraphQLFeedback) => {
     const matchesSearch =
       searchQuery === "" ||
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.description.toLowerCase().includes(searchQuery.toLowerCase())
+      issue.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.ticketId.toLowerCase().includes(searchQuery.toLowerCase())
 
     return matchesSearch
   })
 
   return (
-    <div className="container py-8">
+    <div className="container px-0 sm:px-4 py-8">
       <div className="flex flex-col gap-6">
-        <div>
+        <div className="px-2 sm:px-0">
           <h1 className="text-3xl font-bold">Public Issues</h1>
           <p className="text-muted-foreground">Browse, follow, and engage with community concerns</p>
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-4 px-2 sm:px-0 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search issues..."
+                placeholder="Search by title, description, or ticket number..."
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -249,9 +258,9 @@ export default function IssuesPage() {
             <div className="flex flex-wrap gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-[140px] justify-between">
-                    {statusFilter === "all" ? "All Status" : statusFilter}
-                    <ChevronDown className="h-4 w-4" />
+                  <Button variant="outline" className="w-[100px] sm:w-[140px] justify-between">
+                    <span className="truncate">{statusFilter === "all" ? "All Status" : statusFilter}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -264,9 +273,9 @@ export default function IssuesPage() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-[140px] justify-between">
-                    {categoryFilter === "all" ? "All Categories" : categoryFilter}
-                    <ChevronDown className="h-4 w-4" />
+                  <Button variant="outline" className="w-[100px] sm:w-[140px] justify-between">
+                    <span className="truncate">{categoryFilter === "all" ? "All Categories" : categoryFilter}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -279,19 +288,21 @@ export default function IssuesPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button variant="outline" asChild>
-                <Link href="/submit">Submit New Issue</Link>
+              <Button variant="outline" asChild className="w-[32px] sm:w-auto">
+                <Link href="/submit" className="flex items-center gap-1">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Submit New Issue</span>
+                </Link>
               </Button>
             </div>
           </div>
 
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                {/* <CardTitle>Issues ({filteredIssues.length})</CardTitle> */}
+            <Card className="border-0 sm:border rounded-none sm:rounded-lg">
+              <CardHeader className="px-2 sm:px-6">
                 <CardDescription>Browse through public issues submitted by citizens</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 sm:px-6">
                 {error ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <p className="text-destructive">Error loading issues. Please try again later.</p>
@@ -305,10 +316,10 @@ export default function IssuesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredIssues.map((issue) => (
+                    {filteredIssues.map((issue: GraphQLFeedback) => (
                       <IssueCard 
                         key={issue.id} 
-                        issue={issue} 
+                        issue={transformFeedback(issue)} 
                         currentUserId={user?.id}
                       />
                     ))}

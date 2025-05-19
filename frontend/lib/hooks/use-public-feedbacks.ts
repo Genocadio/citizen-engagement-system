@@ -35,7 +35,8 @@ interface GraphQLFeedback {
   likes: number
   comments: { id: string }[]
   responses: { id: string }[]
-  followers: { id: string }[]
+  followerCount: number
+  isFollowing: boolean
 }
 
 interface FeedbacksData {
@@ -60,9 +61,9 @@ export function transformFeedback(feedback: GraphQLFeedback) {
     isPublic: true,
     isAnonymous: feedback.isAnonymous,
     citizenName: feedback.isAnonymous ? "Anonymous" : `${feedback.author?.firstName || ""} ${feedback.author?.lastName || ""}`.trim() || feedback.author?.username || "Unknown",
+    submittedBy: feedback.author?.id || null,
     email: "",
     phone: "",
-    submittedBy: feedback.author?.id || null,
     location: feedback.location || {
       country: "",
       province: "",
@@ -73,7 +74,9 @@ export function transformFeedback(feedback: GraphQLFeedback) {
     attachments: [],
     assignedAgency: "",
     assignedTo: null,
-    followers: feedback.followers.map(f => f.id),
+    followers: [],
+    followerCount: feedback.followerCount || 0,
+    isFollowing: feedback.isFollowing || false,
     views: 0,
     statusHistory: [
       {
@@ -102,6 +105,9 @@ export function transformFeedback(feedback: GraphQLFeedback) {
       timestamp: createdAt,
       likes: 0,
       likedBy: [],
+    })),
+    responses: feedback.responses.map(r => ({
+      responseId: r.id
     })),
     rating: null,
     language: "en",

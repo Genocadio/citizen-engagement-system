@@ -7,7 +7,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import Header from "@/components/header"
 import { Providers } from "@/components/providers"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -60,8 +59,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1 container mx-auto px-4 md:px-6">{children}</main>
+          <main className="flex-1 p-4 md:p-6">{children}</main>
             <footer className="border-t py-4">
               <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
                 <p className="text-center text-sm text-muted-foreground md:text-left">

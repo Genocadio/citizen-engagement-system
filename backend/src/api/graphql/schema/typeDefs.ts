@@ -11,6 +11,10 @@ export const typeDefs = gql`
     profileUrl: String
     role: String!
     category: String
+    isActive: Boolean!
+    lastLoginAt: String
+    lastActivityAt: String
+    loginHistory: [LoginHistory!]
     createdAt: String!
     updatedAt: String!
     feedbacks(limit: Int, offset: Int): [Feedback!]
@@ -22,6 +26,12 @@ export const typeDefs = gql`
     followedFeedbacks(limit: Int, offset: Int): [Feedback!]
   }
 
+  type LoginHistory {
+    timestamp: String!
+    ipAddress: String
+    userAgent: String
+  }
+
   type Comment {
     id: ID!
     message: String!
@@ -30,6 +40,8 @@ export const typeDefs = gql`
     authorName: String!
     attachments: [String!]
     likes: Int!
+    likesCount: Int!
+    hasLiked: Boolean
     likedBy: [User!]
     createdAt: String!
     updatedAt: String!
@@ -43,6 +55,8 @@ export const typeDefs = gql`
     attachments: [String!]
     statusUpdate: String!
     likes: Int!
+    likesCount: Int!
+    hasLiked: Boolean
     likedBy: [User!]
     createdAt: String!
     updatedAt: String!
@@ -73,8 +87,12 @@ export const typeDefs = gql`
     comments: [Comment!]
     responses: [Response!]
     likes: Int!
+    likesCount: Int!
+    hasLiked: Boolean
     likedBy: [User!]
     followers: [User!]
+    followerCount: Int!
+    isFollowing: Boolean
     isAnonymous: Boolean!
     location: Location
     createdAt: String!
@@ -132,10 +150,30 @@ export const typeDefs = gql`
     category: String
   }
 
+  input UpdateUserInput {
+    firstName: String
+    lastName: String
+    username: String
+    phoneNumber: String
+    profileUrl: String
+    role: String
+    category: String
+    isActive: Boolean
+  }
+
   type Query {
     me: User
+    user(id: ID!): User
+    users(
+      limit: Int
+      offset: Int
+      role: String
+      category: String
+      isActive: Boolean
+    ): [User!]!
     feedback(id: ID!): Feedback
     feedbackByTicketId(ticketId: String!): Feedback
+    myFeedbacks(limit: Int, offset: Int): [Feedback!]!
     feedbacks(
       limit: Int
       offset: Int
@@ -154,8 +192,12 @@ export const typeDefs = gql`
   type Mutation {
     login(email: String!, password: String!): AuthPayload!
     register(input: RegisterInput!): AuthPayload!
+    updateUser(id: ID!, input: UpdateUserInput!): User!
+    updateUserRole(id: ID!, role: String!): User!
+    updateUserActivity(id: ID!, isActive: Boolean!): User!
     createFeedback(input: FeedbackInput!): Feedback!
     updateFeedback(id: ID!, input: FeedbackInput!): Feedback!
+    updateFeedbackStatus(id: ID!, status: String!): Feedback!
     deleteFeedback(id: ID!): Boolean!
     createComment(input: CommentInput!): Comment!
     updateComment(id: ID!, message: String!): Comment!

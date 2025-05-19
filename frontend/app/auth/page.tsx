@@ -51,6 +51,7 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
     devLog("Attempting login with:", { email: loginIdentifier })
 
     try {
@@ -64,7 +65,13 @@ export default function AuthPage() {
       if (data?.login) {
         devLog("Login successful:", { user: data.login.user })
         signIn(data.login.token, data.login.user)
-        router.push("/dashboard")
+        
+        // Route based on user role
+        if (data.login.user.role === 'admin') {
+          router.push("/admin")
+        } else {
+          router.push("/user/dashboard")
+        }
       }
     } catch (error) {
       devLog("Login error:", error)
@@ -73,6 +80,8 @@ export default function AuthPage() {
         description: "Invalid email or password",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 

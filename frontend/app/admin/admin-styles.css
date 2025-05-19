@@ -1,0 +1,25 @@
+/* Admin top navigation styles */
+.admin-nav-item {
+  @apply flex items-center gap-2 text-sm font-medium transition-colors;
+}
+
+.admin-nav-item-active {
+  @apply text-primary border-b-2 border-primary;
+}
+
+.admin-nav-item-inactive {
+  @apply text-muted-foreground hover:text-primary;
+}
+
+/* Mobile menu styles */
+.mobile-nav-item {
+  @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors;
+}
+
+.mobile-nav-item-active {
+  @apply bg-primary/10 text-primary;
+}
+
+.mobile-nav-item-inactive {
+  @apply text-muted-foreground hover:bg-muted hover:text-foreground;
+}

@@ -10,10 +10,12 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, Users, Heart } from "lucide-react"
+import { MessageSquare, Users, UserMinus, UserPlus, MapPin } from "lucide-react"
 import { formatDistanceToNow } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { Feedback, Response } from "@/lib/data"
+import { Feedback, FeedbackType, StatusType } from "@/lib/data"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useFollowFeedback } from "@/lib/hooks/use-follow-feedback"
 
 /**
  * Props interface for the IssueCard component
@@ -22,7 +24,32 @@ import { Feedback, Response } from "@/lib/data"
  * @property {string} [currentUserId] - The ID of the currently logged-in user
  */
 interface IssueCardProps {
-  issue: Feedback
+  issue: {
+    id: string
+    title: string
+    description: string
+    type: FeedbackType
+    category: string
+    subcategory: string
+    ticketNumber: string
+    submittedAt: string
+    status: StatusType
+    isPublic: boolean
+    isAnonymous: boolean
+    citizenName: string
+    submittedBy: string | null
+    location: {
+      country: string
+      province: string
+      district: string
+      sector: string
+    }
+    followers: string[]
+    followerCount: number
+    isFollowing: boolean
+    comments: { commentId: string }[]
+    responses: { responseId: string }[]
+  }
   currentUserId?: string
 }
 
@@ -46,97 +73,110 @@ interface IssueCardProps {
  */
 export function IssueCard({ issue, currentUserId }: IssueCardProps) {
   const router = useRouter()
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [followersCount, setFollowersCount] = useState(issue.followers?.length || 0)
-  const isResolved = issue.status === "Resolved" || issue.status === "Closed"
-  const isAuthor = currentUserId && issue.submittedBy === currentUserId
 
-  const toggleFollow = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click when clicking follow button
-    const newFollowingState = !isFollowing
-    setIsFollowing(newFollowingState)
-    setFollowersCount(prev => newFollowingState ? prev + 1 : prev - 1)
+  const { isFollowing, followersCount, toggleFollow } = useFollowFeedback({
+    feedbackId: issue.id,
+    currentUserId,
+    initialIsFollowing: issue.isFollowing,
+    initialFollowerCount: issue.followerCount
+  })
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking the follow button
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    router.push(`/user/issues/${issue.id}`)
   }
 
   return (
-    <div
-      className="rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-      onClick={() => router.push(`/issues/${issue.id}`)}
+    <Card 
+      className="cursor-pointer transition-colors hover:bg-muted/50" 
+      onClick={handleCardClick}
     >
-      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant={
-                issue.status === "Open"
-                  ? "status_open"
-                  : issue.status === "In Progress"
-                    ? "status_in_progress"
-                    : issue.status === "Resolved"
-                      ? "status_resolved"
-                      : "status_closed"
-              }
-            >
-              {issue.status}
-            </Badge>
-            <Badge variant="outline">{issue.category}</Badge>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(issue.submittedAt))}
-            </span>
-          </div>
-          <h3 className="font-semibold">{issue.title}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">{issue.description}</p>
-        </div>
-        {currentUserId && !isResolved && !isAuthor && (
-          <Button
-            variant={isFollowing ? "default" : "outline"}
-            size="sm"
-            className="shrink-0"
-            onClick={toggleFollow}
+      <CardHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant={
+              issue.status === "Open"
+                ? "status_open"
+                : issue.status === "In Progress"
+                  ? "status_in_progress"
+                  : issue.status === "Resolved"
+                    ? "status_resolved"
+                    : "status_closed"
+            }
           >
-            <Heart className={`h-4 w-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
-            {isFollowing ? "Following" : "Follow"}
-          </Button>
-        )}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {issue.isAnonymous ? (
-            <span className="text-xs text-muted-foreground">Anonymous</span>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src="/placeholder.svg?height=24&width=24" alt={issue.citizenName} />
-                <AvatarFallback>{issue.citizenName.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <span className="text-xs">{issue.citizenName}</span>
+            {issue.status}
+          </Badge>
+          <Badge variant="outline">{issue.category}</Badge>
+          {issue.subcategory && <Badge variant="outline">{issue.subcategory}</Badge>}
+        </div>
+        <CardTitle className="text-xl">{issue.title}</CardTitle>
+        <CardDescription>
+          Ticket #{issue.ticketNumber} • Submitted {formatDistanceToNow(new Date(issue.submittedAt))}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="line-clamp-2 text-muted-foreground">{issue.description}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src="/placeholder.svg" alt={issue.isAnonymous ? "Anonymous" : issue.citizenName} />
+            <AvatarFallback>
+              {issue.isAnonymous ? "A" : issue.citizenName.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm text-muted-foreground">
+            {issue.isAnonymous ? "Anonymous" : (issue.submittedBy === currentUserId ? "You" : issue.citizenName)}
+          </span>
+        </div>
+      </CardContent>
+      <CardFooter className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {(issue.location.sector || issue.location.district || issue.location.province || issue.location.country) && (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              <span>
+                {issue.location.sector && issue.location.district 
+                  ? `${issue.location.sector}, ${issue.location.district}`
+                  : issue.location.district 
+                  ? issue.location.district
+                  : issue.location.province
+                  ? issue.location.province
+                  : issue.location.country}
+              </span>
             </div>
           )}
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>{issue.comments?.length || 0}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span>{followersCount}</span>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MessageSquare className="h-4 w-4" />
+            <span>{(issue.comments?.length || 0) + (issue.responses?.length || 0)}</span>
           </div>
         </div>
-      </div>
-
-      {issue.response && (
-        <div className="mt-4 rounded-lg bg-muted p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium">Latest Response</p>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(issue.response.timestamp))}
-            </span>
-          </div>
-          <p className="mt-1 text-sm line-clamp-2">{issue.response.message}</p>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={isFollowing ? "default" : "outline"} 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFollow()
+            }}
+            style={{ display: issue.submittedBy === currentUserId ? 'none' : 'flex' }}
+          >
+            {isFollowing ? (
+              <>
+                <UserMinus className="h-4 w-4" />
+                <span className="hidden sm:inline">Unfollow</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Follow</span>
+              </>
+            )}
+          </Button>
         </div>
-      )}
-    </div>
+      </CardFooter>
+    </Card>
   )
 } 

@@ -1,35 +1,77 @@
+/**
+ * @fileoverview Feedback model for CitizenES Backend
+ * @description Defines the schema and interface for user feedback items
+ */
+
 import mongoose, { Document, Schema } from 'mongoose';
 
+/**
+ * Interface representing a location
+ * @interface Location
+ */
 export interface Location {
+  /** Country name */
   country?: string;
+  /** Province/State name */
   province?: string;
+  /** District/County name */
   district?: string;
+  /** Sector/Area name */
   sector?: string;
+  /** Additional location details */
   otherDetails?: string;
 }
 
+/**
+ * Interface representing a Feedback document
+ * @interface IFeedback
+ * @extends {Document}
+ */
 export interface IFeedback extends Document {
+  /** Unique ticket identifier */
   ticketId: string;
+  /** Feedback title */
   title: string;
+  /** Detailed feedback description */
   description: string;
+  /** Type of feedback */
   type: 'Complaint' | 'Positive' | 'Suggestion';
+  /** Current status of the feedback */
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  /** Main category of the feedback */
   category: string;
+  /** Subcategory of the feedback */
   subcategory?: string;
+  /** Priority level of the feedback */
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  /** Reference to the feedback author */
   author: mongoose.Types.ObjectId;
+  /** Reference to the assigned staff member */
   assignedTo?: mongoose.Types.ObjectId;
+  /** Array of attachment URLs */
   attachments: string[];
+  /** Whether chat is enabled for this feedback */
   chatEnabled: boolean;
+  /** Number of likes */
   likes: number;
+  /** Array of user IDs who liked the feedback */
   likedBy: mongoose.Types.ObjectId[];
+  /** Array of user IDs following this feedback */
   followers: mongoose.Types.ObjectId[];
+  /** Whether the feedback is anonymous */
   isAnonymous: boolean;
+  /** Location information */
   location?: Location;
+  /** Timestamp when the feedback was created */
   createdAt: Date;
+  /** Timestamp when the feedback was last updated */
   updatedAt: Date;
 }
 
+/**
+ * Mongoose schema for Location
+ * @type {Schema<Location>}
+ */
 const locationSchema = new Schema<Location>({
   country: {
     type: String,
@@ -53,6 +95,10 @@ const locationSchema = new Schema<Location>({
   }
 });
 
+/**
+ * Mongoose schema for Feedback model
+ * @type {Schema<IFeedback>}
+ */
 const feedbackSchema = new Schema<IFeedback>({
   ticketId: {
     type: String,
@@ -135,7 +181,10 @@ const feedbackSchema = new Schema<IFeedback>({
   timestamps: true
 });
 
-// Generate 6-character alphanumeric ticket ID
+/**
+ * Pre-validate hook to generate unique ticket ID
+ * Generates a 6-character alphanumeric ticket ID
+ */
 feedbackSchema.pre('validate', async function(next) {
   if (this.isNew) {
     const generateTicketId = async () => {
@@ -157,7 +206,9 @@ feedbackSchema.pre('validate', async function(next) {
   next();
 });
 
-// Generate short unique ticket ID and set priority based on type
+/**
+ * Pre-save hook to set priority based on feedback type
+ */
 feedbackSchema.pre('save', async function(next) {
   if (this.isNew) {
     // Set priority based on type
@@ -185,4 +236,8 @@ feedbackSchema.index({ 'location.country': 1, 'location.province': 1 });
 feedbackSchema.index({ isAnonymous: 1 });
 feedbackSchema.index({ ticketId: 1 });
 
+/**
+ * Mongoose model for Feedback
+ * @type {Model<IFeedback>}
+ */
 export const Feedback = mongoose.model<IFeedback>('Feedback', feedbackSchema); 

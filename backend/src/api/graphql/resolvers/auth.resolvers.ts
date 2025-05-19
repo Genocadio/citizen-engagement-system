@@ -1,20 +1,46 @@
+/**
+ * @fileoverview Authentication resolvers for GraphQL API
+ * @description Handles user authentication, registration, and JWT token generation
+ */
+
 import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { User, IUser } from '../../../models/User';
 import { logger } from '../../../utils/logger';
 import { AuthenticationError, UserInputError } from 'apollo-server-express';
 import mongoose from 'mongoose';
 
+/**
+ * Interface for JWT payload
+ * @interface JWTPayload
+ */
 interface JWTPayload {
   id: string;
 }
 
+/**
+ * Authentication resolvers for GraphQL mutations
+ * @type {Object}
+ */
 export const authResolvers = {
   Mutation: {
-    login: async (_: any, { email, password }: { email: string; password: string }) => {
+    /**
+     * Login mutation resolver
+     * Authenticates user and returns JWT token
+     * @param {any} _ - Parent resolver result
+     * @param {{ email: string; password: string }} param1 - Login credentials
+     * @param {any} context - GraphQL context
+     * @returns {Promise<{ token: string; user: IUser }>} JWT token and user data
+     * @throws {AuthenticationError} If user not found or password invalid
+     */
+    login: async (_: any, { email, password }: { email: string; password: string }, context: any) => {
       try {
         const user = await User.findOne({ email: email.toLowerCase() }) as IUser & { _id: mongoose.Types.ObjectId };
         if (!user) {
           throw new AuthenticationError('User not found');
+        }
+
+        if (!user.isActive) {
+          throw new AuthenticationError('Account is inactive');
         }
 
         const isValid = await user.comparePassword(password);
@@ -28,6 +54,22 @@ export const authResolvers = {
 
         const token = jwt.sign(payload, secret, options);
 
+        // Update login activity
+        const now = new Date();
+        await User.findByIdAndUpdate(user._id, {
+          $set: {
+            lastLoginAt: now,
+            lastActivityAt: now
+          },
+          $push: {
+            loginHistory: {
+              timestamp: now,
+              ipAddress: context.req?.ip,
+              userAgent: context.req?.headers['user-agent']
+            }
+          }
+        });
+
         return {
           token,
           user
@@ -38,6 +80,14 @@ export const authResolvers = {
       }
     },
 
+    /**
+     * Register mutation resolver
+     * Creates new user account and returns JWT token
+     * @param {any} _ - Parent resolver result
+     * @param {{ input: any }} param1 - User registration data
+     * @returns {Promise<{ token: string; user: IUser }>} JWT token and user data
+     * @throws {UserInputError} If email/username/phone already exists
+     */
     register: async (_: any, { input }: { input: any }) => {
       try {
         // Check for existing user with same email, username, or phone number
@@ -66,7 +116,8 @@ export const authResolvers = {
           ...input,
           email: input.email.toLowerCase(),
           username: input.username?.toLowerCase(),
-          role: 'user'
+          role: 'user',
+          isActive: true // Explicitly set isActive to true for new users
         }) as IUser & { _id: mongoose.Types.ObjectId };
 
         const secret: Secret = process.env.JWT_SECRET || 'your-secret-key';

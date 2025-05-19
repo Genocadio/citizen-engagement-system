@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Main application file for CitizenES Backend
+ * @description Sets up Express server with Apollo GraphQL, Socket.IO, and MongoDB integration
+ */
+
 import express from 'express';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
@@ -13,16 +18,25 @@ import { ChatGateway } from './chat/chat.gateway';
 import jwt from 'jsonwebtoken';
 import { User } from './models/User';
 
-// Initialize Express app
+/**
+ * Express application instance
+ * @type {express.Application}
+ */
 export const app = express();
 
 // Connect to MongoDB
 connectDB();
 
-// Create HTTP server
+/**
+ * HTTP server instance
+ * @type {http.Server}
+ */
 const httpServer = createServer(app);
 
-// Initialize Socket.IO
+/**
+ * Socket.IO server instance
+ * @type {Server}
+ */
 export const io = new Server(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -33,7 +47,10 @@ export const io = new Server(httpServer, {
 // Initialize Chat Gateway
 new ChatGateway(io);
 
-// Initialize Apollo Server
+/**
+ * Apollo GraphQL server instance
+ * @type {ApolloServer}
+ */
 const apolloServer = new ApolloServer({
   typeDefs,
   resolvers,
@@ -53,7 +70,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Start Apollo Server
+/**
+ * Starts the Apollo Server and sets up the GraphQL endpoint
+ * @async
+ * @function startApolloServer
+ * @throws {Error} If server fails to start
+ */
 const startApolloServer = async () => {
   await apolloServer.start();
   
@@ -81,7 +103,9 @@ const startApolloServer = async () => {
   );
 };
 
-// Socket.IO connection handling
+/**
+ * Socket.IO connection event handlers
+ */
 io.on('connection', (socket) => {
   logger.info(`Socket connected: ${socket.id}`);
 

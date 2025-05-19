@@ -12,43 +12,155 @@ A modern backend for the CitizenES feedback platform, built with Node.js, Expres
 - 📝 Category-specific staff access
 - 📦 MongoDB with Mongoose ODM
 - 🔄 TypeScript for type safety
+- 🐳 Docker support for both development and production
+- 🚀 Render deployment ready
 
 ## Prerequisites
 
-- Node.js (v16 or higher)
+- Node.js (v22.15.0)
 - MongoDB
-- npm or yarn
+- pnpm
+- Docker and Docker Compose (for containerized deployment)
 
 ## Setup
+
+### Local Development
 
 1. Clone the repository:
 ```bash
 git clone https://github.com/yourusername/citizen-es-backend.git
-cd citizen-es-backend
+cd backend
 ```
 
 2. Install dependencies:
 ```bash
-npm install
+pnpm install
 ```
 
-3. Create a `.env` file in the root directory:
+3. Create a `.env` file in the root directory (copy from .env.example):
+```bash
+cp .env.example .env
+```
+
+4. Configure your environment variables in `.env`:
 ```env
+# Server Configuration
 PORT=4000
 NODE_ENV=development
+
+# MongoDB Configuration
 MONGODB_URI=mongodb://localhost:27017/citizen-es
+
+# JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+
+# CORS Configuration
 CORS_ORIGIN=http://localhost:3000
+CORS_METHODS=GET,HEAD,PUT,PATCH,POST,DELETE
+CORS_CREDENTIALS=true
+
+# Add other required environment variables from .env.example
 ```
 
-4. Start the development server:
+5. Start the development server:
 ```bash
-npm run dev
+pnpm dev
 ```
+
+### Docker Development
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/citizen-es-backend.git
+cd backend
+```
+
+2. Create and configure your `.env` file:
+```bash
+cp .env.example .env
+# Edit .env with your development settings
+```
+
+3. Start the development environment:
+```bash
+docker-compose up dev
+```
+
+This will start:
+- The backend service with hot-reloading
+- MongoDB database with authentication
+- All necessary environment variables
+- Health checks for all services
+
+### Docker Production
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/citizen-es-backend.git
+cd backend
+```
+
+2. Create and configure your production `.env` file:
+```bash
+cp .env.example .env
+# Edit .env with your production settings
+# Make sure to set secure values for all variables
+```
+
+3. Start the production environment:
+```bash
+docker-compose up prod
+```
+
+This will start:
+- The optimized production backend service
+- MongoDB database with authentication
+- Automatic restart on failure
+- Resource limits and reservations
+- Health checks for all services
+- Production environment variables
+
+### Render Deployment
+
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Configure the following settings:
+   - Build Command: `pnpm install && pnpm build`
+   - Start Command: `pnpm start`
+   - Environment Variables:
+     ```
+     NODE_ENV=production
+     PORT=4000
+     MONGODB_URI=<your-mongodb-connection-string>
+     JWT_SECRET=<your-jwt-secret>
+     JWT_EXPIRES_IN=7d
+     CORS_ORIGIN=<your-frontend-url>
+     CORS_METHODS=GET,HEAD,PUT,PATCH,POST,DELETE
+     CORS_CREDENTIALS=true
+     GRAPHQL_PLAYGROUND_ENABLED=false
+     ERROR_STACK_TRACE=false
+     ```
+4. Deploy!
+
+Note: Make sure to set up a MongoDB database (either MongoDB Atlas or Render's MongoDB service) and use its connection string in the `MONGODB_URI` environment variable.
+
+### Environment Variables
+
+The application requires several environment variables to run properly. Copy `.env.example` to `.env` and configure the following:
+
+- Server Configuration (PORT, NODE_ENV)
+- MongoDB Configuration (MONGODB_URI)
+- JWT Configuration (JWT_SECRET, JWT_EXPIRES_IN)
+- CORS Configuration (CORS_ORIGIN, CORS_METHODS, CORS_CREDENTIALS)
+- Rate Limiting (RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS)
+- Security Settings (HELMET_ENABLED, XSS_PROTECTION, etc.)
+- WebSocket Configuration (WS_PATH, WS_PING_TIMEOUT, etc.)
+- GraphQL Configuration (GRAPHQL_PATH, GRAPHQL_PLAYGROUND_ENABLED)
+- API Configuration (API_PREFIX, API_VERSION)
+- Error Handling (ERROR_STACK_TRACE)
+
+For production, ensure all sensitive values are properly secured and not committed to version control.
 
 ## API Documentation
 
@@ -116,10 +228,10 @@ backend/
 
 ## Development
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm test` - Run tests
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm test` - Run tests
 
 ## Contributing
 
