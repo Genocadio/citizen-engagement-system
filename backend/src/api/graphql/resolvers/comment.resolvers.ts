@@ -39,7 +39,7 @@ const convertUserObject = (user: any) => {
   return {
     ...user.toObject(),
     id: convertIdToString(user._id),
-    _id: convertIdToString(user._id)
+    _id: convertIdToString(user._id),
   };
 };
 
@@ -65,19 +65,19 @@ export const commentResolvers = {
           .populate('likedBy');
 
         // Convert all ObjectIds to strings
-        return comments.map(comment => ({
+        return comments.map((comment) => ({
           ...comment.toObject(),
           id: convertIdToString(comment._id),
           _id: convertIdToString(comment._id),
           author: comment.author ? convertUserObject(comment.author) : null,
           feedback: convertIdToString(comment.feedback),
-          likedBy: comment.likedBy.map(user => convertUserObject(user))
+          likedBy: comment.likedBy.map((user) => convertUserObject(user)),
         }));
       } catch (error) {
         logger.error('Error fetching comments:', error);
         throw error;
       }
-    }
+    },
   },
 
   Mutation: {
@@ -107,15 +107,16 @@ export const commentResolvers = {
           throw new AuthenticationError('User not found');
         }
 
-        const authorName = user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}`
-          : user.username || user.email;
+        const authorName =
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.username || user.email;
 
         const comment = await Comment.create({
           ...input,
           author: context.user.id,
           authorName,
-          feedback: input.feedbackId
+          feedback: input.feedbackId,
         });
 
         const populatedComment = await Comment.findById(comment._id)
@@ -133,17 +134,17 @@ export const commentResolvers = {
           _id: convertIdToString(populatedComment._id),
           author: populatedComment.author ? convertUserObject(populatedComment.author) : null,
           feedback: convertIdToString(populatedComment.feedback),
-          likedBy: populatedComment.likedBy.map(user => convertUserObject(user))
+          likedBy: populatedComment.likedBy.map((user) => convertUserObject(user)),
         };
 
         // Notify feedback followers
         pubsub.publish('COMMENT_ADDED', {
-          commentAdded: commentWithStringIds
+          commentAdded: commentWithStringIds,
         });
 
         // Notify feedback author and followers
         pubsub.publish('USER_FEEDBACK_UPDATED', {
-          userFeedbackUpdated: feedback
+          userFeedbackUpdated: feedback,
         });
 
         return commentWithStringIds;
@@ -176,11 +177,7 @@ export const commentResolvers = {
           throw new AuthenticationError('Not authorized to update this comment');
         }
 
-        const updatedComment = await Comment.findByIdAndUpdate(
-          id,
-          { message },
-          { new: true }
-        )
+        const updatedComment = await Comment.findByIdAndUpdate(id, { message }, { new: true })
           .populate('author')
           .populate('likedBy');
 
@@ -195,11 +192,11 @@ export const commentResolvers = {
           _id: convertIdToString(updatedComment._id),
           author: updatedComment.author ? convertUserObject(updatedComment.author) : null,
           feedback: convertIdToString(updatedComment.feedback),
-          likedBy: updatedComment.likedBy.map(user => convertUserObject(user))
+          likedBy: updatedComment.likedBy.map((user) => convertUserObject(user)),
         };
 
         pubsub.publish('COMMENT_UPDATED', {
-          commentUpdated: commentWithStringIds
+          commentUpdated: commentWithStringIds,
         });
 
         return commentWithStringIds;
@@ -261,8 +258,8 @@ export const commentResolvers = {
         }
 
         // Check if user has already liked the comment
-        const hasLiked = await Comment.findById(id).then(comment => 
-          comment?.likedBy?.includes(context.user.id) || false
+        const hasLiked = await Comment.findById(id).then(
+          (comment) => comment?.likedBy?.includes(context.user.id) || false
         );
 
         if (hasLiked) {
@@ -273,7 +270,7 @@ export const commentResolvers = {
           id,
           {
             $inc: { likes: 1 },
-            $addToSet: { likedBy: context.user.id }
+            $addToSet: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -291,11 +288,11 @@ export const commentResolvers = {
           _id: convertIdToString(updatedComment._id),
           author: updatedComment.author ? convertUserObject(updatedComment.author) : null,
           feedback: convertIdToString(updatedComment.feedback),
-          likedBy: updatedComment.likedBy.map(user => convertUserObject(user))
+          likedBy: updatedComment.likedBy.map((user) => convertUserObject(user)),
         };
 
         pubsub.publish('COMMENT_UPDATED', {
-          commentUpdated: commentWithStringIds
+          commentUpdated: commentWithStringIds,
         });
 
         return commentWithStringIds;
@@ -326,8 +323,8 @@ export const commentResolvers = {
         }
 
         // Check if user has liked the comment
-        const hasLiked = await Comment.findById(id).then(comment => 
-          comment?.likedBy?.includes(context.user.id) || false
+        const hasLiked = await Comment.findById(id).then(
+          (comment) => comment?.likedBy?.includes(context.user.id) || false
         );
 
         if (!hasLiked) {
@@ -338,7 +335,7 @@ export const commentResolvers = {
           id,
           {
             $inc: { likes: -1 },
-            $pull: { likedBy: context.user.id }
+            $pull: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -356,11 +353,11 @@ export const commentResolvers = {
           _id: convertIdToString(updatedComment._id),
           author: updatedComment.author ? convertUserObject(updatedComment.author) : null,
           feedback: convertIdToString(updatedComment.feedback),
-          likedBy: updatedComment.likedBy.map(user => convertUserObject(user))
+          likedBy: updatedComment.likedBy.map((user) => convertUserObject(user)),
         };
 
         pubsub.publish('COMMENT_UPDATED', {
-          commentUpdated: commentWithStringIds
+          commentUpdated: commentWithStringIds,
         });
 
         return commentWithStringIds;
@@ -368,7 +365,7 @@ export const commentResolvers = {
         logger.error('Error unliking comment:', error);
         throw error;
       }
-    }
+    },
   },
 
   Subscription: {
@@ -390,8 +387,8 @@ export const commentResolvers = {
       },
       resolve: (payload: any) => {
         return payload.commentAdded;
-      }
-    }
+      },
+    },
   },
 
   Comment: {
@@ -402,11 +399,13 @@ export const commentResolvers = {
      */
     feedback: async (parent: any) => {
       const feedback = await Feedback.findById(parent.feedback);
-      return feedback ? {
-        ...feedback.toObject(),
-        id: convertIdToString(feedback._id),
-        _id: convertIdToString(feedback._id)
-      } : null;
+      return feedback
+        ? {
+            ...feedback.toObject(),
+            id: convertIdToString(feedback._id),
+            _id: convertIdToString(feedback._id),
+          }
+        : null;
     },
 
     /**
@@ -425,7 +424,7 @@ export const commentResolvers = {
      * @returns {Promise<number>} Number of likes
      */
     likesCount: async (parent: any) => {
-      return await Comment.findById(parent._id).then(comment => comment?.likedBy?.length || 0);
+      return await Comment.findById(parent._id).then((comment) => comment?.likedBy?.length || 0);
     },
 
     /**
@@ -437,9 +436,9 @@ export const commentResolvers = {
      */
     hasLiked: async (parent: any, _: any, context: any) => {
       if (!context.user) return null;
-      return await Comment.findById(parent._id).then(comment => 
-        comment?.likedBy?.includes(context.user.id) || false
+      return await Comment.findById(parent._id).then(
+        (comment) => comment?.likedBy?.includes(context.user.id) || false
       );
-    }
-  }
-}; 
+    },
+  },
+};

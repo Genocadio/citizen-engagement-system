@@ -41,40 +41,47 @@ export interface IResponse extends Document {
  * Mongoose schema for Response model
  * @type {Schema<IResponse>}
  */
-const responseSchema = new Schema<IResponse>({
-  feedback: {
-    type: Schema.Types.ObjectId,
-    ref: 'Feedback',
-    required: true
+const responseSchema = new Schema<IResponse>(
+  {
+    feedback: {
+      type: Schema.Types.ObjectId,
+      ref: 'Feedback',
+      required: true,
+    },
+    by: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    message: {
+      type: String,
+      required: true,
+    },
+    attachments: [
+      {
+        type: String,
+      },
+    ],
+    statusUpdate: {
+      type: String,
+      enum: ['open', 'in-progress', 'resolved', 'closed'],
+      required: true,
+    },
+    likes: {
+      type: Number,
+      default: 0,
+    },
+    likedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
-  by: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  message: {
-    type: String,
-    required: true
-  },
-  attachments: [{
-    type: String
-  }],
-  statusUpdate: {
-    type: String,
-    enum: ['open', 'in-progress', 'resolved', 'closed'],
-    required: true
-  },
-  likes: {
-    type: Number,
-    default: 0
-  },
-  likedBy: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }]
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Add indexes for better query performance
 responseSchema.index({ feedback: 1, createdAt: -1 });
@@ -85,4 +92,4 @@ responseSchema.index({ statusUpdate: 1 });
  * Mongoose model for Response
  * @type {Model<IResponse>}
  */
-export const Response = mongoose.model<IResponse>('Response', responseSchema); 
+export const Response = mongoose.model<IResponse>('Response', responseSchema);

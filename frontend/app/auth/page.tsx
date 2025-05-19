@@ -43,6 +43,7 @@ export default function AuthPage() {
     confirmPassword: "", // Added password confirmation
     phoneNumber: "",
     username: "",
+    category: "citizen", // Default category for new users
   })
 
   // GraphQL mutations
@@ -66,9 +67,13 @@ export default function AuthPage() {
         devLog("Login successful:", { user: data.login.user })
         signIn(data.login.token, data.login.user)
         
-        // Route based on user role
+        // Route based on user role and category
         if (data.login.user.role === 'admin') {
-          router.push("/admin")
+          if (data.login.user.category === 'all') {
+            router.push("/admin")
+          } else {
+            router.push("/admin/feedback")
+          }
         } else {
           router.push("/user/dashboard")
         }
@@ -108,6 +113,7 @@ export default function AuthPage() {
             lastName: registerData.lastName || undefined,
             username: registerData.username || undefined,
             phoneNumber: registerData.phoneNumber || undefined,
+            category: registerData.category,
           },
         },
       })

@@ -148,7 +148,7 @@ export default function Home() {
           <RecentIssues />
           <div className="mt-8 flex justify-center">
             <Button asChild variant="outline">
-              <Link href="/issues" className="flex items-center gap-2">
+              <Link href="/user/issues" className="flex items-center gap-2">
                 View All Issues <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -171,7 +171,7 @@ export default function Home() {
               </CardContent>
               <CardFooter>
                 <Button asChild>
-                  <Link href="/submit">Get Started</Link>
+                  <Link href="/user/submit">Get Started</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -185,7 +185,7 @@ export default function Home() {
               </CardContent>
               <CardFooter>
                 <Button asChild>
-                  <Link href="/dashboard">View Dashboard</Link>
+                  <Link href="/user/dashboard">View Dashboard</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -199,7 +199,7 @@ export default function Home() {
               </CardContent>
               <CardFooter>
                 <Button asChild>
-                  <Link href="/issues">Browse Issues</Link>
+                  <Link href="/user/issues">Browse Issues</Link>
                 </Button>
               </CardFooter>
             </Card>

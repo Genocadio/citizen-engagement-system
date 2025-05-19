@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
+import { useQuery, useMutation } from "@apollo/client"
+import { toast } from "react-toastify"
 import {
   CheckCircle2,
   Filter,
@@ -38,39 +40,139 @@ import {
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getFilteredUsers, updateUserRole, updateUserStatus } from "@/lib/admin-mock-data"
-import type { User } from "@/lib/admin-types"
+import { GET_USERS } from "@/lib/graphql/queries"
+import { UPDATE_USER_ROLE, UPDATE_USER_PROFILE } from "@/lib/graphql/mutations"
+
+// Helper function to safely format dates
+const formatDate = (dateString: string | number | undefined | null, formatStr: string = "MMM d, yyyy") => {
+  if (!dateString) return "Never"
+  try {
+    let date: Date
+    // Handle MongoDB timestamp (milliseconds since epoch)
+    if (typeof dateString === 'number' || /^\d{13}$/.test(dateString)) {
+      date = new Date(Number(dateString))
+    } else {
+      // Try parsing as ISO string
+      date = parseISO(dateString)
+      if (isNaN(date.getTime())) {
+        // If that fails, try regular Date parsing
+        date = new Date(dateString)
+      }
+    }
+    
+    if (isNaN(date.getTime())) {
+      return "Invalid date"
+    }
+    return format(date, formatStr)
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return "Invalid date"
+  }
+}
+
+interface User {
+  id: string
+  email: string
+  firstName?: string
+  lastName?: string
+  username?: string
+  phoneNumber?: string
+  profileUrl?: string
+  role: string
+  category?: string
+  isActive: boolean
+  lastLoginAt?: string
+  lastActivityAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+type UserCategory =  'all'| 'citizen' | 'government' | 'infrastructure' | 'public-services' | 'safety' | 'environment' | 'other'
 
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all")
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "suspended">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
-  // Get filtered users based on current filters
-  const users = getFilteredUsers({
-    role: roleFilter,
-    status: statusFilter,
-    search: searchQuery,
+  // Fetch users with filters
+  const { data, loading, refetch } = useQuery(GET_USERS, {
+    variables: {
+      role: roleFilter === "all" ? undefined : roleFilter,
+      isActive: statusFilter === "all" ? undefined : statusFilter === "active",
+    },
   })
 
+  // Update user role mutation
+  const [updateUserRole] = useMutation(UPDATE_USER_ROLE, {
+    onCompleted: () => {
+      toast.success("User role updated successfully")
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
+
+  // Update user category mutation
+  const [updateUserProfile] = useMutation(UPDATE_USER_PROFILE, {
+    onCompleted: () => {
+      toast.success("User category updated successfully")
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
+
+  // Filter users based on search query
+  const filteredUsers = data?.users?.filter((user: User) => {
+    const searchLower = searchQuery.toLowerCase()
+    return (
+      user.email.toLowerCase().includes(searchLower) ||
+      user.firstName?.toLowerCase().includes(searchLower) ||
+      user.lastName?.toLowerCase().includes(searchLower) ||
+      user.username?.toLowerCase().includes(searchLower)
+    )
+  }) || []
+
   // Handle role change
-  const handleRoleChange = (userId: string, newRole: "admin" | "user") => {
-    updateUserRole(userId, newRole)
-    // Force re-render
-    setSearchQuery(searchQuery)
+  const handleRoleChange = async (userId: string, newRole: "admin" | "user") => {
+    try {
+      await updateUserRole({
+        variables: {
+          id: userId,
+          role: newRole,
+        },
+      })
+    } catch (error) {
+      console.error("Error updating user role:", error)
+    }
   }
 
-  // Handle status change
-  const handleStatusChange = (userId: string, newStatus: "active" | "inactive" | "suspended") => {
-    updateUserStatus(userId, newStatus)
-    // Force re-render
-    setSearchQuery(searchQuery)
+  // Handle category change
+  const handleCategoryChange = async (userId: string, newCategory: UserCategory) => {
+    try {
+      await updateUserProfile({
+        variables: {
+          id: userId,
+          input: {
+            category: newCategory,
+          },
+        },
+      })
+    } catch (error) {
+      console.error("Error updating user category:", error)
+    }
   }
 
   // Handle user selection for details view
   const handleUserSelect = (user: User) => {
     setSelectedUser(user)
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
   }
 
   return (
@@ -93,7 +195,7 @@ export default function UsersPage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <CardTitle>Users</CardTitle>
-                  <CardDescription>{users.length} users found</CardDescription>
+                  <CardDescription>{filteredUsers.length} users found</CardDescription>
                 </div>
                 <div className="flex flex-col gap-2 md:flex-row">
                   <div className="relative">
@@ -144,7 +246,6 @@ export default function UsersPage() {
                               <SelectItem value="all">All Statuses</SelectItem>
                               <SelectItem value="active">Active</SelectItem>
                               <SelectItem value="inactive">Inactive</SelectItem>
-                              <SelectItem value="suspended">Suspended</SelectItem>
                             </SelectGroup>
                           </SelectContent>
                         </Select>
@@ -162,22 +263,21 @@ export default function UsersPage() {
                       <TableHead>User</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Activity</TableHead>
+                      <TableHead>Last Activity</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {filteredUsers.map((user: User) => (
                       <TableRow key={user.id} className="cursor-pointer" onClick={() => handleUserSelect(user)}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-                              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                              <AvatarImage src={user.profileUrl || "/placeholder.svg"} alt={user.username || user.email} />
+                              <AvatarFallback>{(user.username || user.email).charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">{user.name}</p>
+                              <p className="font-medium">{user.username || user.email}</p>
                               <p className="text-xs text-muted-foreground">{user.email}</p>
                             </div>
                           </div>
@@ -196,7 +296,7 @@ export default function UsersPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {user.status === "active" ? (
+                          {user.isActive ? (
                             <Badge
                               variant="outline"
                               className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
@@ -204,40 +304,20 @@ export default function UsersPage() {
                               <CheckCircle2 className="mr-1 h-3 w-3" />
                               Active
                             </Badge>
-                          ) : user.status === "inactive" ? (
+                          ) : (
                             <Badge
                               variant="outline"
                               className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
                             >
                               Inactive
                             </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
-                            >
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Suspended
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {user.location ? (
-                            <div className="text-xs">
-                              <p>{user.location.province}</p>
-                              <p className="text-muted-foreground">{user.location.district}</p>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Not specified</span>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="text-xs">
-                            <p>Last active: {format(user.lastActive, "MMM d, yyyy")}</p>
+                            <p>Last active: {formatDate(user.lastActivityAt)}</p>
                             <p className="text-muted-foreground">
-                              {user.role === "admin"
-                                ? `${user.responseCount} responses`
-                                : `${user.feedbackCount} feedback items`}
+                              Joined: {formatDate(user.createdAt)}
                             </p>
                           </div>
                         </TableCell>
@@ -263,25 +343,6 @@ export default function UsersPage() {
                                   Remove Admin Role
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuSeparator />
-                              {user.status !== "active" && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, "active")}>
-                                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                                  Set as Active
-                                </DropdownMenuItem>
-                              )}
-                              {user.status !== "inactive" && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, "inactive")}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Set as Inactive
-                                </DropdownMenuItem>
-                              )}
-                              {user.status !== "suspended" && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, "suspended")}>
-                                  <ShieldAlert className="mr-2 h-4 w-4" />
-                                  Suspend User
-                                </DropdownMenuItem>
-                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -304,10 +365,10 @@ export default function UsersPage() {
               <CardContent>
                 <div className="flex flex-col items-center pb-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={selectedUser.avatar || "/placeholder.svg"} alt={selectedUser.name} />
-                    <AvatarFallback className="text-xl">{selectedUser.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={selectedUser.profileUrl || "/placeholder.svg"} alt={selectedUser.username || selectedUser.email} />
+                    <AvatarFallback className="text-xl">{(selectedUser.username || selectedUser.email).charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <h3 className="mt-4 text-lg font-semibold">{selectedUser.name}</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{selectedUser.username || selectedUser.email}</h3>
                   <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                   <div className="mt-2 flex gap-2">
                     {selectedUser.role === "admin" ? (
@@ -321,26 +382,19 @@ export default function UsersPage() {
                     ) : (
                       <Badge variant="outline">User</Badge>
                     )}
-                    {selectedUser.status === "active" ? (
+                    {selectedUser.isActive ? (
                       <Badge
                         variant="outline"
                         className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
                       >
                         Active
                       </Badge>
-                    ) : selectedUser.status === "inactive" ? (
+                    ) : (
                       <Badge
                         variant="outline"
                         className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
                       >
                         Inactive
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
-                      >
-                        Suspended
                       </Badge>
                     )}
                   </div>
@@ -354,83 +408,19 @@ export default function UsersPage() {
                   <TabsContent value="info" className="space-y-4 pt-4">
                     <div>
                       <h4 className="text-sm font-medium">Account Created</h4>
-                      <p className="text-sm text-muted-foreground">{format(selectedUser.createdAt, "MMMM d, yyyy")}</p>
+                      <p className="text-sm text-muted-foreground">{formatDate(selectedUser.createdAt)}</p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">Last Active</h4>
                       <p className="text-sm text-muted-foreground">
-                        {format(selectedUser.lastActive, "MMMM d, yyyy 'at' h:mm a")}
+                        {formatDate(selectedUser.lastActivityAt, "MMMM d, yyyy 'at' h:mm a")}
                       </p>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Location</h4>
-                      {selectedUser.location ? (
-                        <div className="text-sm text-muted-foreground">
-                          <p>{selectedUser.location.province}</p>
-                          <p>
-                            {selectedUser.location.district}, {selectedUser.location.sector}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Not specified</p>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium">Activity Summary</h4>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedUser.role === "admin" ? (
-                          <p>{selectedUser.responseCount} responses provided</p>
-                        ) : (
-                          <p>{selectedUser.feedbackCount} feedback items submitted</p>
-                        )}
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="activity" className="pt-4">
-                    <div className="space-y-4">
-                      <div className="border-l-2 border-muted pl-4">
-                        <h4 className="text-sm font-medium">Last Login</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {format(selectedUser.lastActive, "MMMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                      {selectedUser.role === "admin" ? (
-                        <>
-                          <div className="border-l-2 border-muted pl-4">
-                            <h4 className="text-sm font-medium">Responded to Feedback</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(2023, 5, 18), "MMMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                          <div className="border-l-2 border-muted pl-4">
-                            <h4 className="text-sm font-medium">Updated Feedback Status</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(2023, 5, 17), "MMMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="border-l-2 border-muted pl-4">
-                            <h4 className="text-sm font-medium">Submitted Feedback</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(2023, 5, 16), "MMMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                          <div className="border-l-2 border-muted pl-4">
-                            <h4 className="text-sm font-medium">Commented on Feedback</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(2023, 5, 15), "MMMM d, yyyy 'at' h:mm a")}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                      <div className="border-l-2 border-muted pl-4">
-                        <h4 className="text-sm font-medium">Profile Updated</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(2023, 5, 10), "MMMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
+                      <h4 className="text-sm font-medium">Last Login</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(selectedUser.lastLoginAt, "MMMM d, yyyy 'at' h:mm a")}
+                      </p>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -451,26 +441,30 @@ export default function UsersPage() {
                       Remove Admin Role
                     </Button>
                   )}
-
-                  {selectedUser.status === "active" ? (
-                    <Button
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => handleStatusChange(selectedUser.id, "suspended")}
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-medium">Category</p>
+                    <Select
+                      value={selectedUser.category || 'other'}
+                      onValueChange={(value) => handleCategoryChange(selectedUser.id, value as UserCategory)}
                     >
-                      <ShieldAlert className="mr-2 h-4 w-4" />
-                      Suspend User
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => handleStatusChange(selectedUser.id, "active")}
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Activate User
-                    </Button>
-                  )}
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Categories</SelectLabel>
+                          <SelectItem value="citizen">Citizen</SelectItem>
+                          <SelectItem value="government">Government</SelectItem>
+                          <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                          <SelectItem value="public-services">Public Services</SelectItem>
+                          <SelectItem value="safety">Safety</SelectItem>
+                          <SelectItem value="environment">Environment</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="all">All</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>

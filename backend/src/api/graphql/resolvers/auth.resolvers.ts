@@ -32,9 +32,15 @@ export const authResolvers = {
      * @returns {Promise<{ token: string; user: IUser }>} JWT token and user data
      * @throws {AuthenticationError} If user not found or password invalid
      */
-    login: async (_: any, { email, password }: { email: string; password: string }, context: any) => {
+    login: async (
+      _: any,
+      { email, password }: { email: string; password: string },
+      context: any
+    ) => {
       try {
-        const user = await User.findOne({ email: email.toLowerCase() }) as IUser & { _id: mongoose.Types.ObjectId };
+        const user = (await User.findOne({ email: email.toLowerCase() })) as IUser & {
+          _id: mongoose.Types.ObjectId;
+        };
         if (!user) {
           throw new AuthenticationError('User not found');
         }
@@ -59,20 +65,20 @@ export const authResolvers = {
         await User.findByIdAndUpdate(user._id, {
           $set: {
             lastLoginAt: now,
-            lastActivityAt: now
+            lastActivityAt: now,
           },
           $push: {
             loginHistory: {
               timestamp: now,
               ipAddress: context.req?.ip,
-              userAgent: context.req?.headers['user-agent']
-            }
-          }
+              userAgent: context.req?.headers['user-agent'],
+            },
+          },
         });
 
         return {
           token,
-          user
+          user,
         };
       } catch (error) {
         logger.error('Login error:', error);
@@ -95,8 +101,8 @@ export const authResolvers = {
           $or: [
             { email: input.email.toLowerCase() },
             { username: input.username?.toLowerCase() },
-            { phoneNumber: input.phoneNumber }
-          ]
+            { phoneNumber: input.phoneNumber },
+          ],
         });
 
         if (existingUser) {
@@ -112,13 +118,13 @@ export const authResolvers = {
         }
 
         // Create new user with lowercase email and username
-        const user = await User.create({
+        const user = (await User.create({
           ...input,
           email: input.email.toLowerCase(),
           username: input.username?.toLowerCase(),
           role: 'user',
-          isActive: true // Explicitly set isActive to true for new users
-        }) as IUser & { _id: mongoose.Types.ObjectId };
+          isActive: true, // Explicitly set isActive to true for new users
+        })) as IUser & { _id: mongoose.Types.ObjectId };
 
         const secret: Secret = process.env.JWT_SECRET || 'your-secret-key';
         const options: SignOptions = { expiresIn: '7d' };
@@ -128,7 +134,7 @@ export const authResolvers = {
 
         return {
           token,
-          user
+          user,
         };
       } catch (error) {
         logger.error('Registration error:', error);
@@ -137,6 +143,6 @@ export const authResolvers = {
         }
         throw error;
       }
-    }
-  }
-}; 
+    },
+  },
+};

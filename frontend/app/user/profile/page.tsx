@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,35 +10,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import { Loader2, Camera, User, Bell, Shield, History, LogOut } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
+import { useProfile } from "@/lib/hooks/use-profile"
+import { toast } from "react-toastify"
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(null)
-
-  // Form states
-  const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    username: user?.username || "",
-    phone: user?.phone || "",
-    address: "",
-    city: "",
-    province: "",
-    postalCode: "",
-  })
-
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  })
+  
+  const {
+    isLoading: profileLoading,
+    userLoading,
+    profileImage,
+    formData,
+    setFormData,
+    passwordData,
+    setPasswordData,
+    handleProfileUpdate,
+    handlePasswordChange,
+    handleImageUpload,
+    userData,
+  } = useProfile()
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
@@ -51,108 +45,34 @@ export default function ProfilePage() {
     marketingEmails: false,
   })
 
-  // Mock activity data
-  const activities = [
-    { id: 1, type: "feedback", title: "Submitted feedback about road conditions", date: "2025-05-10T14:30:00Z" },
-    { id: 2, type: "comment", title: "Commented on water supply issue", date: "2025-05-08T09:15:00Z" },
-    { id: 3, type: "login", title: "Logged in from new device", date: "2025-05-05T18:45:00Z" },
-    { id: 4, type: "profile", title: "Updated profile information", date: "2025-05-01T11:20:00Z" },
-    { id: 5, type: "feedback", title: "Submitted feedback about public transport", date: "2025-04-28T16:10:00Z" },
-  ]
-
   if (!user) {
     router.push("/auth")
     return null
   }
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been updated successfully.",
-    })
-
-    setIsLoading(false)
-  }
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "New password and confirmation password must match.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    toast({
-      title: "Password changed",
-      description: "Your password has been changed successfully.",
-    })
-
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    })
-
-    setIsLoading(false)
-  }
-
   const handleNotificationUpdate = async () => {
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    toast({
-      title: "Notification preferences updated",
-      description: "Your notification preferences have been updated successfully.",
-    })
-
-    setIsLoading(false)
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setProfileImage(e.target.result as string)
-
-          toast({
-            title: "Profile image updated",
-            description: "Your profile image has been updated successfully.",
-          })
-        }
-      }
-      reader.readAsDataURL(file)
+    try {
+      // TODO: Implement notification settings update
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast.success("Notification preferences updated successfully")
+    } catch (error) {
+      toast.error("Failed to update notification preferences")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+  if (userLoading || profileLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
+
+  const displayName = userData?.me ? `${userData.me.firstName || ''} ${userData.me.lastName || ''}`.trim() || userData.me.username : ''
 
   return (
     <div className="container py-10">
@@ -168,8 +88,8 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={profileImage || "/placeholder.svg?height=96&width=96"} alt={user.name} />
-                    <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={profileImage || "/placeholder.svg?height=96&width=96"} alt={displayName} />
+                    <AvatarFallback className="text-2xl">{displayName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <label
                     htmlFor="profile-image"
@@ -187,8 +107,8 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="text-center">
-                  <h2 className="text-xl font-semibold">{user.name}</h2>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <h2 className="text-xl font-semibold">{displayName}</h2>
+                  <p className="text-sm text-muted-foreground">{userData?.me?.email}</p>
                 </div>
                 <Button variant="outline" className="w-full" onClick={() => signOut()}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -233,20 +153,19 @@ export default function ProfilePage() {
                     <div className="grid gap-6">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="name">Full Name</Label>
+                          <Label htmlFor="firstName">First Name</Label>
                           <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
+                            id="firstName"
+                            value={formData.firstName}
+                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="username">Username</Label>
+                          <Label htmlFor="lastName">Last Name</Label>
                           <Input
-                            id="username"
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                            id="lastName"
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                           />
                         </div>
                       </div>
@@ -258,55 +177,27 @@ export default function ProfilePage() {
                             id="email"
                             type="email"
                             value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            required
+                            disabled
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
+                          <Label htmlFor="phoneNumber">Phone Number</Label>
                           <Input
-                            id="phone"
+                            id="phoneNumber"
                             type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            value={formData.phoneNumber}
+                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
+                        <Label htmlFor="username">Username</Label>
                         <Input
-                          id="address"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          id="username"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                         />
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City</Label>
-                          <Input
-                            id="city"
-                            value={formData.city}
-                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="province">Province</Label>
-                          <Input
-                            id="province"
-                            value={formData.province}
-                            onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="postalCode">Postal Code</Label>
-                          <Input
-                            id="postalCode"
-                            value={formData.postalCode}
-                            onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                          />
-                        </div>
                       </div>
                     </div>
 
@@ -562,24 +453,10 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-8">
-                    {activities.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          {activity.type === "feedback" && <User className="h-5 w-5" />}
-                          {activity.type === "comment" && <Bell className="h-5 w-5" />}
-                          {activity.type === "login" && <Shield className="h-5 w-5" />}
-                          {activity.type === "profile" && <Camera className="h-5 w-5" />}
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-none">{activity.title}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(activity.date)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 flex justify-center">
-                    <Button variant="outline">Load More</Button>
+                    {/* Activity items will be populated from the backend */}
+                    <div className="text-center text-muted-foreground">
+                      No recent activity to display
+                    </div>
                   </div>
                 </CardContent>
               </Card>

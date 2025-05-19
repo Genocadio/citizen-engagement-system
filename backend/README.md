@@ -15,12 +15,24 @@ A modern backend for the CitizenES feedback platform, built with Node.js, Expres
 - 🐳 Docker support for both development and production
 - 🚀 Render deployment ready
 
-## Prerequisites
+## Requirements & Developer Knowledge
 
+### Prerequisites
 - Node.js (v22.15.0)
-- MongoDB
-- pnpm
-- Docker and Docker Compose (for containerized deployment)
+- MongoDB (local or cloud, e.g., MongoDB Atlas)
+- pnpm (package manager)
+- Docker & Docker Compose (for containerized development and deployment)
+
+### Recommended Developer Knowledge
+- TypeScript and modern JavaScript (ES6+)
+- Node.js and Express.js fundamentals
+- REST and GraphQL API design
+- MongoDB and Mongoose ODM
+- JWT authentication and security best practices
+- WebSocket basics (Socket.IO)
+- Docker basics (building, running, and networking containers)
+- Using environment variables for configuration
+- Familiarity with Render or similar cloud deployment platforms
 
 ## Setup
 
@@ -123,11 +135,15 @@ This will start:
 
 ### Render Deployment
 
+#### Option 1: Using Docker Image
+
 1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Configure the following settings:
-   - Build Command: `pnpm install && pnpm build`
-   - Start Command: `pnpm start`
+2. Select "Docker" as the deployment method
+3. Use the following Docker image:
+   ```
+   genoyves/citizen-engagement-system:latest
+   ```
+4. Configure the following settings:
    - Environment Variables:
      ```
      NODE_ENV=production
@@ -140,7 +156,23 @@ This will start:
      CORS_CREDENTIALS=true
      GRAPHQL_PLAYGROUND_ENABLED=false
      ERROR_STACK_TRACE=false
+     WS_PATH=/socket.io
+     WS_PING_TIMEOUT=5000
+     RATE_LIMIT_WINDOW_MS=900000
+     RATE_LIMIT_MAX_REQUESTS=100
+     HELMET_ENABLED=true
+     XSS_PROTECTION=true
      ```
+5. Deploy!
+
+#### Option 2: Using Source Code
+
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Configure the following settings:
+   - Build Command: `pnpm install && pnpm build`
+   - Start Command: `pnpm start`
+   - Environment Variables: (same as above)
 4. Deploy!
 
 Note: Make sure to set up a MongoDB database (either MongoDB Atlas or Render's MongoDB service) and use its connection string in the `MONGODB_URI` environment variable.
@@ -164,35 +196,218 @@ For production, ensure all sensitive values are properly secured and not committ
 
 ## API Documentation
 
-### REST Endpoints
-
-- POST `/api/auth/register` - Register a new user
-- POST `/api/auth/login` - Login user
-- POST `/api/feedback` - Create new feedback
-- PUT `/api/feedback/:id` - Update feedback
-- DELETE `/api/feedback/:id` - Delete feedback
-
 ### GraphQL Endpoints
 
-- POST `/graphql` - GraphQL API endpoint
-- WebSocket `/graphql` - GraphQL subscriptions
+The application uses GraphQL as its primary API interface. The GraphQL endpoint is available at `/graphql`.
 
-Example query:
+#### Authentication
+
 ```graphql
-query FeedbackList($limit: Int, $offset: Int, $category: String) {
-  feedbacks(limit: $limit, offset: $offset, category: $category) {
-    id
-    title
-    type
-    comments(limit: 5) {
-      message
-      authorName
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    token
+    user {
+      id
+      email
+      firstName
+      lastName
+      role
+    }
+  }
+}
+
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    token
+    user {
+      id
+      email
+      firstName
+      lastName
+      role
     }
   }
 }
 ```
 
+#### User Management
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    id
+    email
+    firstName
+    lastName
+    username
+    role
+    category
+    isActive
+  }
+}
+
+mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+  updateUser(id: $id, input: $input) {
+    id
+    firstName
+    lastName
+    username
+    role
+    category
+  }
+}
+```
+
+#### Feedback Management
+
+```graphql
+query GetFeedbacks($limit: Int, $offset: Int, $category: String) {
+  feedbacks(limit: $limit, offset: $offset, category: $category) {
+    id
+    ticketId
+    title
+    description
+    type
+    status
+    category
+    priority
+    author {
+      id
+      firstName
+      lastName
+    }
+    comments {
+      id
+      message
+      authorName
+    }
+    responses {
+      id
+      message
+      statusUpdate
+    }
+  }
+}
+
+mutation CreateFeedback($input: FeedbackInput!) {
+  createFeedback(input: $input) {
+    id
+    ticketId
+    title
+    status
+  }
+}
+
+mutation UpdateFeedbackStatus($id: ID!, $status: String!) {
+  updateFeedbackStatus(id: $id, status: $status) {
+    id
+    status
+  }
+}
+```
+
+#### Comments and Responses
+
+```graphql
+mutation AddComment($input: CommentInput!) {
+  createComment(input: $input) {
+    id
+    message
+    authorName
+    createdAt
+  }
+}
+
+mutation AddResponse($input: ResponseInput!) {
+  createResponse(input: $input) {
+    id
+    message
+    statusUpdate
+    createdAt
+  }
+}
+```
+
+#### Feedback Interactions
+
+```graphql
+mutation LikeFeedback($id: ID!) {
+  likeFeedback(id: $id) {
+    id
+    likesCount
+    hasLiked
+  }
+}
+
+mutation FollowFeedback($id: ID!) {
+  followFeedback(id: $id) {
+    id
+    followerCount
+    isFollowing
+  }
+}
+```
+
+#### Statistics and Analytics
+
+```graphql
+query GetFeedbackStats {
+  feedbackStats {
+    totalFeedback
+    newFeedback
+    resolvedFeedback
+    pendingFeedback
+    feedbackByCategory {
+      infrastructure
+      publicServices
+      safety
+      environment
+      other
+    }
+    feedbackByStatus {
+      new
+      inProgress
+      answered
+      closed
+    }
+    responseRate
+    averageResponseTime
+  }
+}
+```
+
+#### Real-time Subscriptions
+
+```graphql
+subscription OnFeedbackUpdate($feedbackId: ID!) {
+  feedbackUpdated(feedbackId: $feedbackId) {
+    id
+    status
+    comments {
+      id
+      message
+    }
+    responses {
+      id
+      message
+      statusUpdate
+    }
+  }
+}
+
+subscription OnNewComment($feedbackId: ID!) {
+  commentAdded(feedbackId: $feedbackId) {
+    id
+    message
+    authorName
+    createdAt
+  }
+}
+```
+
 ### WebSocket Events
+
+The application uses WebSocket for real-time features:
 
 - `join-feedback` - Join a feedback chat room
 - `send-message` - Send a message in a feedback chat

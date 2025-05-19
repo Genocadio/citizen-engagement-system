@@ -9,7 +9,7 @@ export const checkRole = (roles: Role[]) => {
     }
 
     const userRole = req.user.role as Role;
-    
+
     if (!roles.includes(userRole)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
@@ -23,4 +23,4 @@ export const checkRole = (roles: Role[]) => {
 
     next();
   };
-}; 
+};

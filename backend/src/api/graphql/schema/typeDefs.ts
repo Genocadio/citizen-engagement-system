@@ -99,6 +99,40 @@ export const typeDefs = gql`
     updatedAt: String!
   }
 
+  type FeedbackStats {
+    totalFeedback: Int!
+    newFeedback: Int!
+    resolvedFeedback: Int!
+    pendingFeedback: Int!
+    feedbackByCategory: FeedbackCategoryStats!
+    feedbackByStatus: FeedbackStatusStats!
+    feedbackByPriority: FeedbackPriorityStats!
+    responseRate: Float!
+    averageResponseTime: Float!
+  }
+
+  type FeedbackCategoryStats {
+    infrastructure: Int!
+    publicServices: Int!
+    safety: Int!
+    environment: Int!
+    other: Int!
+  }
+
+  type FeedbackStatusStats {
+    new: Int!
+    inProgress: Int!
+    answered: Int!
+    closed: Int!
+  }
+
+  type FeedbackPriorityStats {
+    low: Int!
+    medium: Int!
+    high: Int!
+    critical: Int!
+  }
+
   type AuthPayload {
     token: String!
     user: User!
@@ -164,13 +198,7 @@ export const typeDefs = gql`
   type Query {
     me: User
     user(id: ID!): User
-    users(
-      limit: Int
-      offset: Int
-      role: String
-      category: String
-      isActive: Boolean
-    ): [User!]!
+    users(limit: Int, offset: Int, role: String, category: String, isActive: Boolean): [User!]!
     feedback(id: ID!): Feedback
     feedbackByTicketId(ticketId: String!): Feedback
     myFeedbacks(limit: Int, offset: Int): [Feedback!]!
@@ -185,6 +213,7 @@ export const typeDefs = gql`
       country: String
       province: String
     ): [Feedback!]!
+    feedbackStats: FeedbackStats!
     comments(feedbackId: ID!, limit: Int, offset: Int): [Comment!]!
     responses(feedbackId: ID!, limit: Int, offset: Int): [Response!]!
   }
@@ -221,4 +250,4 @@ export const typeDefs = gql`
     responseAdded(feedbackId: ID!): Response!
     userFeedbackUpdated(userId: ID!): Feedback!
   }
-`; 
+`;

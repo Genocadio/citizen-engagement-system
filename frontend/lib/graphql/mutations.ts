@@ -282,6 +282,20 @@ export const UPDATE_USER_PROFILE = gql`
   mutation UpdateUserProfile($id: ID!, $input: UpdateUserInput!) {
     updateUser(id: $id, input: $input) {
       id
+      firstName
+      lastName
+      username
+      email
+      phoneNumber
+      profileUrl
+    }
+  }
+`;
+
+export const UPDATE_USER_ROLE = gql`
+  mutation UpdateUserRole($id: ID!, $role: String!) {
+    updateUserRole(id: $id, role: $role) {
+      id
       email
       firstName
       lastName
@@ -295,6 +309,15 @@ export const UPDATE_USER_PROFILE = gql`
       lastActivityAt
       createdAt
       updatedAt
+    }
+  }
+`;
+
+export const CHANGE_PASSWORD = gql`
+  mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
+    changePassword(currentPassword: $currentPassword, newPassword: $newPassword) {
+      success
+      message
     }
   }
 `; 

@@ -10,22 +10,22 @@ export const resolvers = {
     ...userResolvers.Query,
     ...feedbackResolvers.Query,
     ...commentResolvers.Query,
-    ...responseResolvers.Query
+    ...responseResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
     ...feedbackResolvers.Mutation,
     ...commentResolvers.Mutation,
     ...responseResolvers.Mutation,
-    ...userResolvers.Mutation
+    ...userResolvers.Mutation,
   },
   Subscription: {
     ...feedbackResolvers.Subscription,
     ...commentResolvers.Subscription,
-    ...responseResolvers.Subscription
+    ...responseResolvers.Subscription,
   },
   User: userResolvers.User,
   Feedback: feedbackResolvers.Feedback,
   Comment: commentResolvers.Comment,
-  Response: responseResolvers.Response
-}; 
+  Response: responseResolvers.Response,
+};

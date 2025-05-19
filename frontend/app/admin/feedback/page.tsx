@@ -22,6 +22,7 @@ import {
 import type { FeedbackCategory, FeedbackPriority, FeedbackStatus } from "@/lib/admin-types"
 import { Feedback, FeedbackType } from "@/lib/data"
 import { useFeedbackPagination } from "@/lib/hooks/use-feedback-pagination"
+import { useAuth } from "@/lib/auth-context"
 
 const ITEMS_PER_PAGE = 10
 
@@ -40,9 +41,10 @@ interface FeedbackItem {
 }
 
 export default function FeedbackPage() {
+  const { user } = useAuth()
   const currentAdmin = getCurrentAdmin()
   const [searchQuery, setSearchQuery] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [categoryFilter, setCategoryFilter] = useState<string>(user?.category || "all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
 
@@ -55,7 +57,7 @@ export default function FeedbackPage() {
 
   const resetFilters = () => {
     setSearchQuery("")
-    setCategoryFilter("all")
+    setCategoryFilter(user?.category || "all")
     setStatusFilter("all")
     setTypeFilter("all")
   }
@@ -109,19 +111,24 @@ export default function FeedbackPage() {
               />
             </div>
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {user?.category === 'all' && (
+              <Select 
+                value={categoryFilter} 
+                onValueChange={setCategoryFilter}
+              >
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-[180px]">

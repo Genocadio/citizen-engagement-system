@@ -40,7 +40,7 @@ const convertUserObject = (user: any) => {
   return {
     ...user.toObject(),
     id: convertIdToString(user._id),
-    _id: convertIdToString(user._id)
+    _id: convertIdToString(user._id),
   };
 };
 
@@ -76,8 +76,8 @@ export const feedbackResolvers = {
           _id: convertIdToString(feedback._id),
           author: feedback.author ? convertUserObject(feedback.author) : null,
           assignedTo: feedback.assignedTo ? convertUserObject(feedback.assignedTo) : null,
-          likedBy: feedback.likedBy.map(user => convertUserObject(user)),
-          followers: feedback.followers.map(user => convertUserObject(user))
+          likedBy: feedback.likedBy.map((user) => convertUserObject(user)),
+          followers: feedback.followers.map((user) => convertUserObject(user)),
         };
       } catch (error) {
         logger.error('Error fetching feedback:', error);
@@ -111,8 +111,8 @@ export const feedbackResolvers = {
           _id: convertIdToString(feedback._id),
           author: feedback.author ? convertUserObject(feedback.author) : null,
           assignedTo: feedback.assignedTo ? convertUserObject(feedback.assignedTo) : null,
-          likedBy: feedback.likedBy.map(user => convertUserObject(user)),
-          followers: feedback.followers.map(user => convertUserObject(user))
+          likedBy: feedback.likedBy.map((user) => convertUserObject(user)),
+          followers: feedback.followers.map((user) => convertUserObject(user)),
         };
       } catch (error) {
         logger.error('Error fetching feedback by ticket ID:', error);
@@ -143,14 +143,14 @@ export const feedbackResolvers = {
           .populate('followers');
 
         // Convert all IDs to strings
-        return feedbacks.map(feedback => ({
+        return feedbacks.map((feedback) => ({
           ...feedback.toObject(),
           id: convertIdToString(feedback._id),
           _id: convertIdToString(feedback._id),
           author: feedback.author ? convertUserObject(feedback.author) : null,
           assignedTo: feedback.assignedTo ? convertUserObject(feedback.assignedTo) : null,
-          likedBy: feedback.likedBy.map(user => convertUserObject(user)),
-          followers: feedback.followers.map(user => convertUserObject(user))
+          likedBy: feedback.likedBy.map((user) => convertUserObject(user)),
+          followers: feedback.followers.map((user) => convertUserObject(user)),
         }));
       } catch (error) {
         logger.error('Error fetching feedbacks:', error);
@@ -182,20 +182,113 @@ export const feedbackResolvers = {
           .populate('followers');
 
         // Convert all IDs to strings
-        return feedbacks.map(feedback => ({
+        return feedbacks.map((feedback) => ({
           ...feedback.toObject(),
           id: convertIdToString(feedback._id),
           _id: convertIdToString(feedback._id),
           author: feedback.author ? convertUserObject(feedback.author) : null,
           assignedTo: feedback.assignedTo ? convertUserObject(feedback.assignedTo) : null,
-          likedBy: feedback.likedBy.map(user => convertUserObject(user)),
-          followers: feedback.followers.map(user => convertUserObject(user))
+          likedBy: feedback.likedBy.map((user) => convertUserObject(user)),
+          followers: feedback.followers.map((user) => convertUserObject(user)),
         }));
       } catch (error) {
         logger.error('Error fetching user feedbacks:', error);
         throw error;
       }
-    }
+    },
+
+    /**
+     * Get feedback statistics
+     * @param {any} _ - Parent resolver result
+     * @param {any} __ - Arguments
+     * @param {any} context - GraphQL context
+     * @returns {Promise<Object>} Feedback statistics
+     */
+    feedbackStats: async (_: any, __: any, context: any) => {
+      try {
+        // Get all feedback for calculations
+        const allFeedback = await Feedback.find({});
+
+        // Calculate total feedback
+        const totalFeedback = allFeedback.length;
+
+        // Calculate feedback by status
+        const newFeedback = allFeedback.filter((f) => f.status === 'open').length;
+        const resolvedFeedback = allFeedback.filter((f) => f.status === 'closed').length;
+        const pendingFeedback = allFeedback.filter((f) => f.status === 'in-progress').length;
+
+        // Calculate feedback by category
+        const feedbackByCategory = {
+          infrastructure: allFeedback.filter((f) => f.category === 'infrastructure').length,
+          publicServices: allFeedback.filter((f) => f.category === 'public-services').length,
+          safety: allFeedback.filter((f) => f.category === 'safety').length,
+          environment: allFeedback.filter((f) => f.category === 'environment').length,
+          other: allFeedback.filter((f) => f.category === 'other').length,
+        };
+
+        // Calculate feedback by status
+        const feedbackByStatus = {
+          new: newFeedback,
+          inProgress: pendingFeedback,
+          answered: allFeedback.filter((f) => f.status === 'resolved').length,
+          closed: resolvedFeedback,
+        };
+
+        // Calculate feedback by priority
+        const feedbackByPriority = {
+          low: allFeedback.filter((f) => f.priority === 'low').length,
+          medium: allFeedback.filter((f) => f.priority === 'medium').length,
+          high: allFeedback.filter((f) => f.priority === 'high').length,
+          critical: allFeedback.filter((f) => f.priority === 'urgent').length,
+        };
+
+        // Calculate response rate
+        const feedbackWithResponses = await Feedback.countDocuments({
+          responses: { $exists: true, $not: { $size: 0 } },
+        });
+        const responseRate = totalFeedback > 0 ? (feedbackWithResponses / totalFeedback) * 100 : 0;
+
+        // Calculate average response time
+        const feedbackWithResponseTime = await Feedback.aggregate([
+          {
+            $match: {
+              responses: { $exists: true, $not: { $size: 0 } },
+            },
+          },
+          {
+            $project: {
+              responseTime: {
+                $divide: [
+                  { $subtract: [{ $arrayElemAt: ['$responses.createdAt', 0] }, '$createdAt'] },
+                  3600000, // Convert milliseconds to hours
+                ],
+              },
+            },
+          },
+        ]);
+
+        const averageResponseTime =
+          feedbackWithResponseTime.length > 0
+            ? feedbackWithResponseTime.reduce((acc, curr) => acc + curr.responseTime, 0) /
+              feedbackWithResponseTime.length
+            : 0;
+
+        return {
+          totalFeedback,
+          newFeedback,
+          resolvedFeedback,
+          pendingFeedback,
+          feedbackByCategory,
+          feedbackByStatus,
+          feedbackByPriority,
+          responseRate,
+          averageResponseTime,
+        };
+      } catch (error) {
+        logger.error('Error fetching feedback statistics:', error);
+        throw error;
+      }
+    },
   },
 
   Mutation: {
@@ -216,7 +309,7 @@ export const feedbackResolvers = {
       try {
         const feedbackData = {
           ...input,
-          author: input.isAnonymous ? undefined : context.user?.id
+          author: input.isAnonymous ? undefined : context.user?.id,
         };
 
         const feedback = await Feedback.create(feedbackData);
@@ -230,12 +323,12 @@ export const feedbackResolvers = {
         // Add author as a follower by default if not anonymous
         if (!input.isAnonymous && context.user) {
           await Feedback.findByIdAndUpdate(feedback._id, {
-            $addToSet: { followers: context.user.id }
+            $addToSet: { followers: context.user.id },
           });
         }
 
         pubsub.publish('FEEDBACK_CREATED', {
-          feedbackUpdated: populatedFeedback
+          feedbackUpdated: populatedFeedback,
         });
 
         return populatedFeedback;
@@ -254,7 +347,11 @@ export const feedbackResolvers = {
      * @throws {AuthenticationError} If not authorized
      * @throws {UserInputError} If feedback not found
      */
-    updateFeedbackStatus: async (_: any, { id, status }: { id: string; status: string }, context: any) => {
+    updateFeedbackStatus: async (
+      _: any,
+      { id, status }: { id: string; status: string },
+      context: any
+    ) => {
       try {
         const feedback = await Feedback.findById(id);
         if (!feedback) {
@@ -287,12 +384,12 @@ export const feedbackResolvers = {
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         // Notify followers
         pubsub.publish('USER_FEEDBACK_UPDATED', {
-          userFeedbackUpdated: updatedFeedback
+          userFeedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -324,7 +421,7 @@ export const feedbackResolvers = {
             throw new AuthenticationError('Only admins can update anonymous feedback');
           }
           // Only allow status updates for anonymous feedback
-          if (Object.keys(input).some(key => key !== 'status')) {
+          if (Object.keys(input).some((key) => key !== 'status')) {
             throw new AuthenticationError('Only status can be updated for anonymous feedback');
           }
         } else {
@@ -337,23 +434,19 @@ export const feedbackResolvers = {
           }
         }
 
-        const updatedFeedback = await Feedback.findByIdAndUpdate(
-          id,
-          { $set: input },
-          { new: true }
-        )
+        const updatedFeedback = await Feedback.findByIdAndUpdate(id, { $set: input }, { new: true })
           .populate('author')
           .populate('assignedTo')
           .populate('likedBy')
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         // Notify followers
         pubsub.publish('USER_FEEDBACK_UPDATED', {
-          userFeedbackUpdated: updatedFeedback
+          userFeedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -430,7 +523,7 @@ export const feedbackResolvers = {
           id,
           {
             $inc: { likes: 1 },
-            $addToSet: { likedBy: context.user.id }
+            $addToSet: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -440,7 +533,7 @@ export const feedbackResolvers = {
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -478,7 +571,7 @@ export const feedbackResolvers = {
           id,
           {
             $inc: { likes: -1 },
-            $pull: { likedBy: context.user.id }
+            $pull: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -488,7 +581,7 @@ export const feedbackResolvers = {
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -525,7 +618,7 @@ export const feedbackResolvers = {
         const updatedFeedback = await Feedback.findByIdAndUpdate(
           id,
           {
-            $addToSet: { followers: context.user.id }
+            $addToSet: { followers: context.user.id },
           },
           { new: true }
         )
@@ -535,7 +628,7 @@ export const feedbackResolvers = {
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -572,7 +665,7 @@ export const feedbackResolvers = {
         const updatedFeedback = await Feedback.findByIdAndUpdate(
           id,
           {
-            $pull: { followers: context.user.id }
+            $pull: { followers: context.user.id },
           },
           { new: true }
         )
@@ -582,7 +675,7 @@ export const feedbackResolvers = {
           .populate('followers');
 
         pubsub.publish('FEEDBACK_UPDATED', {
-          feedbackUpdated: updatedFeedback
+          feedbackUpdated: updatedFeedback,
         });
 
         return updatedFeedback;
@@ -590,7 +683,7 @@ export const feedbackResolvers = {
         logger.error('Error unfollowing feedback:', error);
         throw error;
       }
-    }
+    },
   },
 
   Subscription: {
@@ -612,7 +705,7 @@ export const feedbackResolvers = {
       },
       resolve: (payload: any) => {
         return payload.feedbackUpdated;
-      }
+      },
     },
 
     /**
@@ -637,8 +730,8 @@ export const feedbackResolvers = {
       },
       resolve: (payload: any) => {
         return payload.userFeedbackUpdated;
-      }
-    }
+      },
+    },
   },
 
   Feedback: {
@@ -677,12 +770,12 @@ export const feedbackResolvers = {
         .populate('author')
         .populate('likedBy');
 
-      return comments.map(comment => ({
+      return comments.map((comment) => ({
         ...comment.toObject(),
         id: convertIdToString(comment._id),
         _id: convertIdToString(comment._id),
         author: comment.author ? convertUserObject(comment.author) : null,
-        likedBy: comment.likedBy.map(user => convertUserObject(user))
+        likedBy: comment.likedBy.map((user) => convertUserObject(user)),
       }));
     },
 
@@ -700,12 +793,12 @@ export const feedbackResolvers = {
         .populate('by')
         .populate('likedBy');
 
-      return responses.map(response => ({
+      return responses.map((response) => ({
         ...response.toObject(),
         id: convertIdToString(response._id),
         _id: convertIdToString(response._id),
         by: response.by ? convertUserObject(response.by) : null,
-        likedBy: response.likedBy.map(user => convertUserObject(user))
+        likedBy: response.likedBy.map((user) => convertUserObject(user)),
       }));
     },
 
@@ -715,7 +808,9 @@ export const feedbackResolvers = {
      * @returns {Promise<number>} Number of followers
      */
     followerCount: async (parent: any) => {
-      return await Feedback.findById(parent._id).then(feedback => feedback?.followers?.length || 0);
+      return await Feedback.findById(parent._id).then(
+        (feedback) => feedback?.followers?.length || 0
+      );
     },
 
     /**
@@ -727,8 +822,8 @@ export const feedbackResolvers = {
      */
     isFollowing: async (parent: any, _: any, context: any) => {
       if (!context.user) return null;
-      return await Feedback.findById(parent._id).then(feedback => 
-        feedback?.followers?.includes(context.user.id) || false
+      return await Feedback.findById(parent._id).then(
+        (feedback) => feedback?.followers?.includes(context.user.id) || false
       );
     },
 
@@ -738,7 +833,7 @@ export const feedbackResolvers = {
      * @returns {Promise<number>} Number of likes
      */
     likesCount: async (parent: any) => {
-      return await Feedback.findById(parent._id).then(feedback => feedback?.likedBy?.length || 0);
+      return await Feedback.findById(parent._id).then((feedback) => feedback?.likedBy?.length || 0);
     },
 
     /**
@@ -750,9 +845,9 @@ export const feedbackResolvers = {
      */
     hasLiked: async (parent: any, _: any, context: any) => {
       if (!context.user) return null;
-      return await Feedback.findById(parent._id).then(feedback => 
-        feedback?.likedBy?.includes(context.user.id) || false
+      return await Feedback.findById(parent._id).then(
+        (feedback) => feedback?.likedBy?.includes(context.user.id) || false
       );
-    }
-  }
-}; 
+    },
+  },
+};

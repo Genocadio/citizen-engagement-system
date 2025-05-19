@@ -27,7 +27,16 @@ export function AdminTopNav() {
     if (!isLoading && (!user || user.role !== 'admin')) {
       router.push('/auth')
     }
-  }, [user, router, isLoading])
+    
+    // Additional route protection for non-'all' category admins
+    if (!isLoading && user?.role === 'admin' && user?.category !== 'all') {
+      const allowedPaths = ['/admin/feedback', '/admin/profile']
+      const isAllowedPath = allowedPaths.some(path => pathname?.startsWith(path))
+      if (!isAllowedPath) {
+        router.push('/admin/feedback')
+      }
+    }
+  }, [user, router, isLoading, pathname])
 
   if (isLoading) {
     return null // or return a loading spinner if you prefer
@@ -41,7 +50,7 @@ export function AdminTopNav() {
     return pathname === path || pathname?.startsWith(`${path}/`)
   }
 
-  const navItems = [
+  const navItems = user.category === 'all' ? [
     {
       name: "Dashboard",
       href: "/admin",
@@ -57,16 +66,13 @@ export function AdminTopNav() {
       href: "/admin/users",
       icon: Users,
     },
+ 
+  ] : [
     {
-      name: "Reports",
-      href: "/admin/reports",
-      icon: BarChart3,
-    },
-    {
-      name: "Settings",
-      href: "/admin/settings",
-      icon: Settings,
-    },
+      name: "Feedback",
+      href: "/admin/feedback",
+      icon: FileText,
+    }
   ]
 
   const handleSignOut = () => {
@@ -135,13 +141,7 @@ export function AdminTopNav() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/"
-            className="hidden md:flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            <Home className="h-4 w-4" />
-            Back to Site
-          </Link>
+          
           <ModeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -163,9 +163,7 @@ export function AdminTopNav() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/settings">Settings</Link>
-              </DropdownMenuItem>
+            
               <DropdownMenuItem asChild>
                 <Link href="/admin/profile">My Profile</Link>
               </DropdownMenuItem>

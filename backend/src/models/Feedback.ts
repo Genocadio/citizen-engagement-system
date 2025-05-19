@@ -75,117 +75,126 @@ export interface IFeedback extends Document {
 const locationSchema = new Schema<Location>({
   country: {
     type: String,
-    trim: true
+    trim: true,
   },
   province: {
     type: String,
-    trim: true
+    trim: true,
   },
   district: {
     type: String,
-    trim: true
+    trim: true,
   },
   sector: {
     type: String,
-    trim: true
+    trim: true,
   },
   otherDetails: {
     type: String,
-    trim: true
-  }
+    trim: true,
+  },
 });
 
 /**
  * Mongoose schema for Feedback model
  * @type {Schema<IFeedback>}
  */
-const feedbackSchema = new Schema<IFeedback>({
-  ticketId: {
-    type: String,
-    unique: true,
-    required: true,
-    index: true
+const feedbackSchema = new Schema<IFeedback>(
+  {
+    ticketId: {
+      type: String,
+      unique: true,
+      required: true,
+      index: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: ['Complaint', 'Positive', 'Suggestion'],
+      required: true,
+      set: (v: string) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase(),
+    },
+    status: {
+      type: String,
+      enum: ['open', 'in-progress', 'resolved', 'closed'],
+      default: 'open',
+    },
+    category: {
+      type: String,
+      required: true,
+    },
+    subcategory: {
+      type: String,
+      trim: true,
+    },
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium',
+      set: (v: string) => v.toLowerCase(),
+    },
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: function (this: IFeedback) {
+        return !this.isAnonymous;
+      },
+    },
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    attachments: [
+      {
+        type: String,
+      },
+    ],
+    chatEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    likes: {
+      type: Number,
+      default: 0,
+    },
+    likedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    isAnonymous: {
+      type: Boolean,
+      default: false,
+    },
+    location: {
+      type: locationSchema,
+    },
   },
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  type: {
-    type: String,
-    enum: ['Complaint', 'Positive', 'Suggestion'],
-    required: true,
-    set: (v: string) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase()
-  },
-  status: {
-    type: String,
-    enum: ['open', 'in-progress', 'resolved', 'closed'],
-    default: 'open'
-  },
-  category: {
-    type: String,
-    required: true
-  },
-  subcategory: {
-    type: String,
-    trim: true
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium',
-    set: (v: string) => v.toLowerCase()
-  },
-  author: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: function(this: IFeedback) {
-      return !this.isAnonymous;
-    }
-  },
-  assignedTo: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  attachments: [{
-    type: String
-  }],
-  chatEnabled: {
-    type: Boolean,
-    default: true
-  },
-  likes: {
-    type: Number,
-    default: 0
-  },
-  likedBy: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  followers: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  isAnonymous: {
-    type: Boolean,
-    default: false
-  },
-  location: {
-    type: locationSchema
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
 /**
  * Pre-validate hook to generate unique ticket ID
  * Generates a 6-character alphanumeric ticket ID
  */
-feedbackSchema.pre('validate', async function(next) {
+feedbackSchema.pre('validate', async function (next) {
   if (this.isNew) {
     const generateTicketId = async () => {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -193,7 +202,7 @@ feedbackSchema.pre('validate', async function(next) {
       for (let i = 0; i < 6; i++) {
         ticketId += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-      
+
       const exists = await mongoose.model('Feedback').findOne({ ticketId });
       if (exists) {
         return generateTicketId();
@@ -209,7 +218,7 @@ feedbackSchema.pre('validate', async function(next) {
 /**
  * Pre-save hook to set priority based on feedback type
  */
-feedbackSchema.pre('save', async function(next) {
+feedbackSchema.pre('save', async function (next) {
   if (this.isNew) {
     // Set priority based on type
     switch (this.type) {
@@ -240,4 +249,4 @@ feedbackSchema.index({ ticketId: 1 });
  * Mongoose model for Feedback
  * @type {Model<IFeedback>}
  */
-export const Feedback = mongoose.model<IFeedback>('Feedback', feedbackSchema); 
+export const Feedback = mongoose.model<IFeedback>('Feedback', feedbackSchema);

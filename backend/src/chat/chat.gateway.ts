@@ -35,42 +35,45 @@ export class ChatGateway {
       });
 
       // Handle new messages
-      socket.on('send-message', async (data: {
-        feedbackId: string;
-        message: string;
-        authorId: string;
-        authorName: string;
-      }) => {
-        try {
-          const { feedbackId, message, authorId, authorName } = data;
+      socket.on(
+        'send-message',
+        async (data: {
+          feedbackId: string;
+          message: string;
+          authorId: string;
+          authorName: string;
+        }) => {
+          try {
+            const { feedbackId, message, authorId, authorName } = data;
 
-          const feedback = await Feedback.findById(feedbackId);
-          if (!feedback || !feedback.chatEnabled) {
-            socket.emit('error', 'Invalid feedback or chat disabled');
-            return;
+            const feedback = await Feedback.findById(feedbackId);
+            if (!feedback || !feedback.chatEnabled) {
+              socket.emit('error', 'Invalid feedback or chat disabled');
+              return;
+            }
+
+            const comment = await Comment.create({
+              message,
+              feedback: feedbackId,
+              author: authorId,
+              authorName,
+            });
+
+            // Broadcast to all clients in the room
+            this.io.to(feedbackId).emit('new-message', {
+              id: comment._id,
+              message: comment.message,
+              authorName: comment.authorName,
+              createdAt: comment.createdAt,
+            });
+
+            logger.info(`New message in feedback ${feedbackId} from ${authorName}`);
+          } catch (error) {
+            logger.error('Error sending message:', error);
+            socket.emit('error', 'Failed to send message');
           }
-
-          const comment = await Comment.create({
-            message,
-            feedback: feedbackId,
-            author: authorId,
-            authorName
-          });
-
-          // Broadcast to all clients in the room
-          this.io.to(feedbackId).emit('new-message', {
-            id: comment._id,
-            message: comment.message,
-            authorName: comment.authorName,
-            createdAt: comment.createdAt
-          });
-
-          logger.info(`New message in feedback ${feedbackId} from ${authorName}`);
-        } catch (error) {
-          logger.error('Error sending message:', error);
-          socket.emit('error', 'Failed to send message');
         }
-      });
+      );
 
       // Handle disconnection
       socket.on('disconnect', () => {
@@ -78,4 +81,4 @@ export class ChatGateway {
       });
     });
   }
-} 
+}

@@ -40,7 +40,7 @@ export const responseResolvers = {
         logger.error('Error fetching responses:', error);
         throw error;
       }
-    }
+    },
   },
 
   Mutation: {
@@ -69,7 +69,7 @@ export const responseResolvers = {
           by: context.user.id,
           message: input.message,
           statusUpdate: input.statusUpdate,
-          attachments: input.attachments || []
+          attachments: input.attachments || [],
         });
 
         const populatedResponse = await Response.findById(response._id)
@@ -78,12 +78,12 @@ export const responseResolvers = {
 
         // Notify feedback followers
         pubsub.publish('RESPONSE_ADDED', {
-          responseAdded: populatedResponse
+          responseAdded: populatedResponse,
         });
 
         // Notify feedback author and followers
         pubsub.publish('USER_FEEDBACK_UPDATED', {
-          userFeedbackUpdated: feedback
+          userFeedbackUpdated: feedback,
         });
 
         return populatedResponse;
@@ -117,16 +117,12 @@ export const responseResolvers = {
           throw new AuthenticationError('Not authorized to update this response');
         }
 
-        const updatedResponse = await Response.findByIdAndUpdate(
-          id,
-          { message },
-          { new: true }
-        )
+        const updatedResponse = await Response.findByIdAndUpdate(id, { message }, { new: true })
           .populate('by')
           .populate('likedBy');
 
         pubsub.publish('RESPONSE_UPDATED', {
-          responseUpdated: updatedResponse
+          responseUpdated: updatedResponse,
         });
 
         return updatedResponse;
@@ -196,7 +192,7 @@ export const responseResolvers = {
           id,
           {
             $inc: { likes: 1 },
-            $addToSet: { likedBy: context.user.id }
+            $addToSet: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -204,7 +200,7 @@ export const responseResolvers = {
           .populate('likedBy');
 
         pubsub.publish('RESPONSE_UPDATED', {
-          responseUpdated: updatedResponse
+          responseUpdated: updatedResponse,
         });
 
         return updatedResponse;
@@ -242,7 +238,7 @@ export const responseResolvers = {
           id,
           {
             $inc: { likes: -1 },
-            $pull: { likedBy: context.user.id }
+            $pull: { likedBy: context.user.id },
           },
           { new: true }
         )
@@ -250,7 +246,7 @@ export const responseResolvers = {
           .populate('likedBy');
 
         pubsub.publish('RESPONSE_UPDATED', {
-          responseUpdated: updatedResponse
+          responseUpdated: updatedResponse,
         });
 
         return updatedResponse;
@@ -258,7 +254,7 @@ export const responseResolvers = {
         logger.error('Error unliking response:', error);
         throw error;
       }
-    }
+    },
   },
 
   Subscription: {
@@ -280,8 +276,8 @@ export const responseResolvers = {
       },
       resolve: (payload: any) => {
         return payload.responseAdded;
-      }
-    }
+      },
+    },
   },
 
   Response: {
@@ -309,7 +305,7 @@ export const responseResolvers = {
      * @returns {Promise<number>} Number of likes
      */
     likesCount: async (parent: any) => {
-      return await Response.findById(parent._id).then(response => response?.likedBy?.length || 0);
+      return await Response.findById(parent._id).then((response) => response?.likedBy?.length || 0);
     },
 
     /**
@@ -321,9 +317,9 @@ export const responseResolvers = {
      */
     hasLiked: async (parent: any, _: any, context: any) => {
       if (!context.user) return null;
-      return await Response.findById(parent._id).then(response => 
-        response?.likedBy?.includes(context.user.id) || false
+      return await Response.findById(parent._id).then(
+        (response) => response?.likedBy?.includes(context.user.id) || false
       );
-    }
-  }
-}; 
+    },
+  },
+};

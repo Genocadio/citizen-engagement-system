@@ -29,7 +29,15 @@ export interface IUser extends Document {
   /** User's role in the system */
   role: 'user' | 'admin';
   /** User's category (for regular users) */
-  category?: 'citizen' | 'government' | "infrastructure" | "public-services" | "safety" | "environment" | "other";
+  category?:
+    | 'all'
+    | 'citizen'
+    | 'government'
+    | 'infrastructure'
+    | 'public-services'
+    | 'safety'
+    | 'environment'
+    | 'other';
   /** User's activity state */
   isActive: boolean;
   /** Last login timestamp */
@@ -54,88 +62,102 @@ export interface IUser extends Document {
  * Mongoose schema for User model
  * @type {Schema<IUser>}
  */
-const userSchema = new Schema<IUser>({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
-    index: true
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
-  },
-  firstName: {
-    type: String,
-    trim: true
-  },
-  lastName: {
-    type: String,
-    trim: true
-  },
-  username: {
-    type: String,
-    unique: true,
-    sparse: true,
-    trim: true,
-    lowercase: true,
-    index: true
-  },
-  phoneNumber: {
-    type: String,
-    unique: true,
-    sparse: true,
-    trim: true,
-    match: [/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number'],
-    index: true
-  },
-  profileUrl: {
-    type: String,
-    trim: true,
-    match: [/^https?:\/\/.+/, 'Please enter a valid URL']
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  category: {
-    type: String,
-    enum: ['citizen', 'government', 'infrastructure', 'public-services', 'safety', 'environment', 'other'],
-    required: function(this: IUser) {
-      return this.role === 'user';
-    }
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastLoginAt: {
-    type: Date
-  },
-  lastActivityAt: {
-    type: Date
-  },
-  loginHistory: [{
-    timestamp: {
-      type: Date,
-      required: true
+const userSchema = new Schema<IUser>(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      index: true,
     },
-    ipAddress: String,
-    userAgent: String
-  }]
-}, {
-  timestamps: true
-});
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+    phoneNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      match: [/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number'],
+      index: true,
+    },
+    profileUrl: {
+      type: String,
+      trim: true,
+      match: [/^https?:\/\/.+/, 'Please enter a valid URL'],
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+    category: {
+      type: String,
+      enum: [
+        'citizen',
+        'government',
+        'infrastructure',
+        'public-services',
+        'safety',
+        'environment',
+        'other',
+        'all',
+      ],
+      required: function (this: IUser) {
+        return this.role === 'user';
+      },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    lastLoginAt: {
+      type: Date,
+    },
+    lastActivityAt: {
+      type: Date,
+    },
+    loginHistory: [
+      {
+        timestamp: {
+          type: Date,
+          required: true,
+        },
+        ipAddress: String,
+        userAgent: String,
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
 
 /**
  * Pre-save hook to validate user name
  * Ensures at least one of firstName or lastName is provided
  */
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (!this.firstName && !this.lastName) {
     next(new Error('At least one of firstName or lastName must be provided'));
   }
@@ -146,9 +168,9 @@ userSchema.pre('save', function(next) {
  * Pre-save hook to hash password
  * Hashes the password before saving to the database
  */
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -163,7 +185,7 @@ userSchema.pre('save', async function(next) {
  * @param {string} candidatePassword - Password to compare
  * @returns {Promise<boolean>} Whether the password matches
  */
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
@@ -174,4 +196,4 @@ userSchema.index({ firstName: 1, lastName: 1 });
  * Mongoose model for User
  * @type {Model<IUser>}
  */
-export const User = mongoose.model<IUser>('User', userSchema); 
+export const User = mongoose.model<IUser>('User', userSchema);

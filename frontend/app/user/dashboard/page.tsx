@@ -327,7 +327,7 @@ export default function DashboardPage() {
             <CardDescription>Please sign in to view your dashboard.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Button onClick={() => router.push("/")}>Return to Home</Button>
+            <Button onClick={() => router.push("/user")}>Return to Home</Button>
           </CardContent>
         </Card>
       </div>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
     <div className="container py-8">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button onClick={() => router.push("/submit")}>
+        <Button onClick={() => router.push("/user/submit")}>
           <Plus className="mr-2 h-4 w-4" />
           New Feedback
         </Button>

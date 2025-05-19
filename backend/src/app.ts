@@ -40,8 +40,8 @@ const httpServer = createServer(app);
 export const io = new Server(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    methods: ['GET', 'POST']
-  }
+    methods: ['GET', 'POST'],
+  },
 });
 
 // Initialize Chat Gateway
@@ -58,16 +58,18 @@ const apolloServer = new ApolloServer({
     {
       async serverWillStart() {
         logger.info('🚀 Apollo Server starting up!');
-      }
-    }
-  ]
+      },
+    },
+  ],
 });
 
 // Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 /**
@@ -78,8 +80,9 @@ app.use(express.json());
  */
 const startApolloServer = async () => {
   await apolloServer.start();
-  
-  app.use('/graphql', 
+
+  app.use(
+    '/graphql',
     expressMiddleware(apolloServer, {
       context: async ({ req }) => {
         // Add auth context here
@@ -98,7 +101,7 @@ const startApolloServer = async () => {
         }
 
         return { req, user };
-      }
+      },
     })
   );
 };
@@ -123,4 +126,4 @@ io.on('connection', (socket) => {
 startApolloServer().catch((err) => {
   logger.error('Failed to start Apollo Server:', err);
   process.exit(1);
-}); 
+});

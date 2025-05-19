@@ -30,8 +30,7 @@ export const userResolvers = {
           throw new Error('Authentication required');
         }
 
-        const user = await User.findById(context.user._id)
-          .select('-password');
+        const user = await User.findById(context.user._id).select('-password');
         return user;
       } catch (error) {
         logger.error('Error fetching user:', error);
@@ -78,7 +77,11 @@ export const userResolvers = {
      * @returns {Promise<Array>} List of users
      * @throws {Error} If not authorized
      */
-    users: async (_: any, { limit = 10, offset = 0, role, category, isActive }: any, context: any) => {
+    users: async (
+      _: any,
+      { limit = 10, offset = 0, role, category, isActive }: any,
+      context: any
+    ) => {
       try {
         if (!context.user || context.user.role !== 'admin') {
           throw new ForbiddenError('Not authorized to view users');
@@ -100,7 +103,7 @@ export const userResolvers = {
         logger.error('Error fetching users:', error);
         throw error;
       }
-    }
+    },
   },
 
   Mutation: {
@@ -113,7 +116,6 @@ export const userResolvers = {
      * @throws {Error} If not authorized or user not found
      */
     updateUser: async (_: any, { id, input }: { id: string; input: any }, context: any) => {
-      let session;
       try {
         // Authentication check
         if (!context.user) {
@@ -130,46 +132,44 @@ export const userResolvers = {
           delete input.role;
         }
 
-        // Start transaction
-        session = await mongoose.startSession();
-        session.startTransaction();
-
         // Find the user first to ensure it exists
-        const existingUser = await User.findById(id).session(session);
+        const existingUser = await User.findById(id);
         if (!existingUser) {
           throw new UserInputError('User not found');
         }
 
         // Clean up input - remove undefined values but keep empty strings
-        const cleanedInput = Object.entries(input).reduce((acc, [key, value]) => {
-          if (value !== null && value !== undefined) {
-            acc[key] = value;
-          }
-          return acc;
-        }, {} as Record<string, any>);
+        const cleanedInput = Object.entries(input).reduce(
+          (acc, [key, value]) => {
+            if (value !== null && value !== undefined) {
+              acc[key] = value;
+            }
+            return acc;
+          },
+          {} as Record<string, any>
+        );
 
         // If no valid fields to update, return the existing user
         if (Object.keys(cleanedInput).length === 0) {
-          await session.commitTransaction();
           return existingUser;
         }
 
         // Validate unique fields only if they are being updated
         if (cleanedInput.username !== undefined && cleanedInput.username !== '') {
-          const existingUsername = await User.findOne({ 
-            username: cleanedInput.username, 
-            _id: { $ne: id } 
-          }).session(session);
+          const existingUsername = await User.findOne({
+            username: cleanedInput.username,
+            _id: { $ne: id },
+          });
           if (existingUsername) {
             throw new UserInputError('Username already taken');
           }
         }
 
         if (cleanedInput.phoneNumber !== undefined && cleanedInput.phoneNumber !== '') {
-          const existingPhone = await User.findOne({ 
-            phoneNumber: cleanedInput.phoneNumber, 
-            _id: { $ne: id } 
-          }).session(session);
+          const existingPhone = await User.findOne({
+            phoneNumber: cleanedInput.phoneNumber,
+            _id: { $ne: id },
+          });
           if (existingPhone) {
             throw new UserInputError('Phone number already registered');
           }
@@ -179,10 +179,9 @@ export const userResolvers = {
         const updatedUser = await User.findByIdAndUpdate(
           id,
           { $set: cleanedInput },
-          { 
+          {
             new: true,
             runValidators: true,
-            session
           }
         ).select('-password');
 
@@ -190,30 +189,21 @@ export const userResolvers = {
           throw new Error('Failed to update user - unexpected null result');
         }
 
-        await session.commitTransaction();
         return updatedUser;
       } catch (error: any) {
-        if (session) {
-          await session.abortTransaction();
-        }
-        
         // Handle specific error types
         if (error.name === 'ValidationError') {
-          throw new UserInputError('Invalid input data', { 
-            errors: Object.values(error.errors).map((e: any) => e.message)
+          throw new UserInputError('Invalid input data', {
+            errors: Object.values(error.errors).map((e: any) => e.message),
           });
         }
-        
+
         if (error.name === 'CastError') {
           throw new UserInputError('Invalid ID format');
         }
 
         // Re-throw other errors
         throw error;
-      } finally {
-        if (session) {
-          session.endSession();
-        }
       }
     },
 
@@ -235,11 +225,9 @@ export const userResolvers = {
           throw new UserInputError('Invalid role');
         }
 
-        const user = await User.findByIdAndUpdate(
-          id,
-          { $set: { role } },
-          { new: true }
-        ).select('-password');
+        const user = await User.findByIdAndUpdate(id, { $set: { role } }, { new: true }).select(
+          '-password'
+        );
 
         if (!user) {
           throw new UserInputError('User not found');
@@ -260,17 +248,19 @@ export const userResolvers = {
      * @returns {Promise<Object>} Updated user
      * @throws {Error} If not authorized or user not found
      */
-    updateUserActivity: async (_: any, { id, isActive }: { id: string; isActive: boolean }, context: any) => {
+    updateUserActivity: async (
+      _: any,
+      { id, isActive }: { id: string; isActive: boolean },
+      context: any
+    ) => {
       try {
         if (!context.user || context.user.role !== 'admin') {
           throw new ForbiddenError('Not authorized to update user activity');
         }
 
-        const user = await User.findByIdAndUpdate(
-          id,
-          { $set: { isActive } },
-          { new: true }
-        ).select('-password');
+        const user = await User.findByIdAndUpdate(id, { $set: { isActive } }, { new: true }).select(
+          '-password'
+        );
 
         if (!user) {
           throw new UserInputError('User not found');
@@ -281,7 +271,7 @@ export const userResolvers = {
         logger.error('Error updating user activity:', error);
         throw error;
       }
-    }
+    },
   },
 
   User: {
@@ -291,7 +281,10 @@ export const userResolvers = {
      * @param {{ limit?: number; offset?: number }} param1 - Pagination parameters
      * @returns {Promise<Array>} Array of user's feedbacks
      */
-    feedbacks: async (parent: any, { limit = 10, offset = 0 }: { limit?: number; offset?: number }) => {
+    feedbacks: async (
+      parent: any,
+      { limit = 10, offset = 0 }: { limit?: number; offset?: number }
+    ) => {
       try {
         const feedbacks = await Feedback.find({ author: parent._id })
           .sort({ createdAt: -1 })
@@ -310,7 +303,10 @@ export const userResolvers = {
      * @param {{ limit?: number; offset?: number }} param1 - Pagination parameters
      * @returns {Promise<Array>} Array of user's comments
      */
-    comments: async (parent: any, { limit = 10, offset = 0 }: { limit?: number; offset?: number }) => {
+    comments: async (
+      parent: any,
+      { limit = 10, offset = 0 }: { limit?: number; offset?: number }
+    ) => {
       try {
         const comments = await Comment.find({ author: parent._id })
           .sort({ createdAt: -1 })
@@ -329,7 +325,10 @@ export const userResolvers = {
      * @param {{ limit?: number; offset?: number }} param1 - Pagination parameters
      * @returns {Promise<Array>} Array of feedbacks assigned to user
      */
-    assignedFeedbacks: async (parent: any, { limit = 10, offset = 0 }: { limit?: number; offset?: number }) => {
+    assignedFeedbacks: async (
+      parent: any,
+      { limit = 10, offset = 0 }: { limit?: number; offset?: number }
+    ) => {
       try {
         const feedbacks = await Feedback.find({ assignedTo: parent._id })
           .sort({ createdAt: -1 })
@@ -340,6 +339,6 @@ export const userResolvers = {
         logger.error('Error fetching assigned feedbacks:', error);
         throw error;
       }
-    }
-  }
-}; 
+    },
+  },
+};

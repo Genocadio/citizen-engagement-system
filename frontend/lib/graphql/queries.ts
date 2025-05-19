@@ -230,7 +230,6 @@ export const GET_FEEDBACK_BY_ID = gql`
         category
         createdAt
         updatedAt
-        __typename
       }
       assignedTo {
         id
@@ -239,7 +238,6 @@ export const GET_FEEDBACK_BY_ID = gql`
         username
         profileUrl
         role
-        __typename
       }
       location {
         country
@@ -247,7 +245,6 @@ export const GET_FEEDBACK_BY_ID = gql`
         district
         sector
         otherDetails
-        __typename
       }
       attachments
       likes
@@ -255,7 +252,6 @@ export const GET_FEEDBACK_BY_ID = gql`
       hasLiked
       likedBy {
         id
-        __typename
       }
       followerCount
       isFollowing
@@ -268,7 +264,6 @@ export const GET_FEEDBACK_BY_ID = gql`
           lastName
           username
           profileUrl
-          __typename
         }
         authorName
         attachments
@@ -277,11 +272,9 @@ export const GET_FEEDBACK_BY_ID = gql`
         hasLiked
         likedBy {
           id
-          __typename
         }
         createdAt
         updatedAt
-        __typename
       }
       responses {
         id
@@ -292,20 +285,16 @@ export const GET_FEEDBACK_BY_ID = gql`
           lastName
           username
           profileUrl
-          __typename
         }
         statusUpdate
         attachments
         likes
         likedBy {
           id
-          __typename
         }
         createdAt
         updatedAt
-        __typename
       }
-      __typename
     }
   }
 `;
@@ -376,6 +365,59 @@ export const GET_CURRENT_USER = gql`
       lastActivityAt
       createdAt
       updatedAt
+    }
+  }
+`;
+
+export const GET_USERS = gql`
+  query GetUsers($limit: Int, $offset: Int, $role: String, $category: String, $isActive: Boolean) {
+    users(limit: $limit, offset: $offset, role: $role, category: $category, isActive: $isActive) {
+      id
+      email
+      firstName
+      lastName
+      username
+      phoneNumber
+      profileUrl
+      role
+      category
+      isActive
+      lastLoginAt
+      lastActivityAt
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const GET_FEEDBACK_STATS = gql`
+  query GetFeedbackStats {
+    feedbackStats {
+      totalFeedback
+      newFeedback
+      resolvedFeedback
+      pendingFeedback
+      feedbackByCategory {
+        infrastructure
+        publicServices
+        safety
+        environment
+        other
+      }
+      feedbackByStatus {
+        new
+        inProgress
+        answered
+        closed
+      }
+      feedbackByPriority {
+        low
+        medium
+        high
+        critical
+      }
+      responseRate
+      averageResponseTime
     }
   }
 `; 

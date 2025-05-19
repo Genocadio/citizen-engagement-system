@@ -97,7 +97,7 @@ export default function Header() {
               </nav>
             </SheetContent>
           </Sheet>
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+          <Link href="/user" className="flex items-center gap-2 text-lg  md:hidden font-semibold">
             Citizen Engagement
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
